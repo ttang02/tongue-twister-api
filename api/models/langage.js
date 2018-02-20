@@ -4,7 +4,6 @@ var Schema = mongoose.Schema;
 var LanguageSchema = new Schema({
   language : {
     type : String,
-    default : 'français',
     required : 'The language is required'
   },
   codelang : {
