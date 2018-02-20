@@ -1,0 +1,37 @@
+{
+  "name": "tongue-twister-api",
+  "version": "1.0.0",
+  "description": "Tongue Twister's backend with rest api and graphql",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ttang02/tongue-twister-api.git"
+  },
+  "keywords": [
+    "Speech",
+    "Improvement",
+    "Languages",
+    "Mouth",
+    "API",
+    "Mongo",
+    "Node.JS",
+    "GraphQL"
+  ],
+  "author": "Thanh Lam TANG (ttang02)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ttang02/tongue-twister-api/issues"
+  },
+  "homepage": "https://github.com/ttang02/tongue-twister-api#readme",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "express": "^4.16.2",
+    "mongoose": "^5.0.6"
+  }
+}
