@@ -41,7 +41,7 @@ exports.readBylanguage = function(req, res){
         .then((idLanguage) =>{
             TongueTwisters.find({languageid: idLanguage})
             .catch((err) =>{
-                res.status(501).send(message : "Could not retrieve tonguetwister by language code : "+)
+                res.status(501).send({message : "Could not retrieve tonguetwister by language code : "+idLanguage});
             })
             .then((tts) =>{
                 res.status(200).send(tts);
@@ -72,7 +72,7 @@ exports.create = function(req, res){
                 res.status(200).send(tonguetwister);
             });
         });
-  console.log("TongueTwister / POST");
+    console.log("TongueTwister / POST");
 };
 
 //PUT : TongueTwister
@@ -95,7 +95,7 @@ exports.update = function(req, res){
             res.status(200).send(tt);
     });
     console.log("Tongue Twister / PUT");
-}
+};
 
 //DELETE : TongueTwister
 exports.delete = function(req, res){
@@ -110,4 +110,6 @@ exports.delete = function(req, res){
             res.status(500).send({message: "Could not delete Tongue Twister with id: " + req.params.ttId});
         });
     console.log("Tongue Twister / DELETE");
-}
+};
+
+//DELETE by language : TongueTwister
