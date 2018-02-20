@@ -3,8 +3,14 @@ const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const yaml = require('yamljs');
+
 //Connect to database
 const db = mongoose.connect('mongodb://localhost/tonguetwister');
+
+//swagger
+const swaggerUi = require('swagger-ui-express');
+const swaggerdoc = yaml.load('./swagger/swagger.yaml');
 
 //imports models
 const Languages = require('./api/models/langage');
@@ -23,6 +29,9 @@ app.use(bodyParser.urlencoded({extended : false}));
 //Init routes with app
 languagesRoutes(app);
 tonguetwisterRoutes(app);
+
+//swagger 
+app.use('/', swaggerUi.serve, swaggerUi.setup(swaggerdoc));
 
 //error 
 app.use(function(err, req, res, next){

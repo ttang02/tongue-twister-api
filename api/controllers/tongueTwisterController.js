@@ -1,5 +1,6 @@
 var mongoose = require('mongoose');
 var TongueTwisters = mongoose.model('TongueTwisters');
+var Language = mongoose.model('Languages');
 
 //GET : TongueTwister
 exports.readAll = function(req, res){
@@ -34,7 +35,7 @@ exports.readBylanguage = function(req, res){
     if(!req.params.languageId){
         res.status(400).send({message : "languageId can not be empty"});
     }
-    Langauge.findOne({ codelang : req.params.languageId})
+    Language.findOne({ codelang : req.params.languageId})
         .catch((err) => {
             res.status(500).send({message : "Could not retrieve tonguetwister by language code : "+req.params.languageId });
         })

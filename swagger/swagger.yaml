@@ -1,0 +1,227 @@
+swagger: '2.0'
+info:
+  version: 1.0.0
+  title: Tongue Twister API
+  description: Tongue Twister API
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+host: localhost:3000
+basePath: "/api"
+tags:
+- name: TongueTwister
+  description: API for tonguetwister in the system
+- name : Language
+  description: API for language in the system
+schemes:
+- http
+consumes:
+- application/json
+produces:
+- application/json
+paths:
+  "/tonguetwister":
+    post:
+      tags:
+      - TongueTwister
+      summary: Add a new tonguetwister in the db
+      parameters:
+      - name: tonguetwister
+        in: body
+        description: TongueTwister that we want to create
+        schema:
+          "$ref": "#/definitions/TongueTwisters"
+      produces:
+      - application/json
+      responses:
+        '200':
+          description: New tonguetwister is created
+        '400':
+          description : Content not found
+        '401':
+          description : LanguageID not found
+        '501':
+          description : Could not found language
+        '500':
+          description : Could not created tonguetwister
+    get:
+      tags:
+      - TongueTwister
+      summary: Get all tonguetwisters in system
+      responses:
+        '200':
+          description: OK
+          schema:
+        '500':
+          description : Could not retrieve all tonguetwister
+  "/tonguetwister/{tonguetwistedId}":
+    parameters:
+    - name: tonguetwistedId
+      in: path
+      required: true
+      description: ID of TongueTwister that we want to find
+      type: string
+    get:
+      tags:
+      - TongueTwister
+      summary: Get TongueTwister with given ID
+      responses:
+        '200':
+          description: TongueTwister is found
+        '500':
+          description: Could not retrieve this tonguetwister id
+    put:
+      summary: Update TongueTwister with give ID
+      tags:
+      - TongueTwister
+      parameters:
+      - name: tonguetwister
+        in: body
+        description: TongueTwister with new values of properties
+        schema:
+          "$ref": "#/definitions/TongueTwisters"
+      responses:
+        '200':
+          description: TongueTwister is updated
+        '400':
+          description : Content not found
+        '401':
+          description : LanguageID not found
+        '500':
+          description : Could not update this tonguetwister id
+    delete:
+      summary: Delete TongueTwister with given ID
+      tags:
+      - TongueTwister
+      responses:
+        '200':
+          description: TongueTwister is deleted
+        '400':
+          description : The id can not be empty
+        '500':
+          description : Could not delete this tonguetwister id
+  "/tonguetwister/language/{codelanguage}":
+    parameters:
+    - name: codelanguage
+      in: path
+      required: true
+      description: codelanguage that we want to find
+      type: string
+    get:
+      tags:
+      - TongueTwister
+      summary: Get TongueTwisters with code language
+      responses:
+        '200':
+          description: TongueTwisters is found
+        '500':
+          description: Could not retrieve this code language
+  "/language":
+    post:
+      tags:
+      - Language
+      description: Add a new language to the db
+      summary : Add a new language into the db
+      parameters:
+      - name: language
+        in: body
+        description: Language objet that needs to be added to the system
+        schema:
+          "$ref": "#/definitions/Languages"
+      produces:
+      - application/json
+      responses:
+        '200':
+          description: New tonguetwister is created
+        '400':
+          description : Content not found
+        '401':
+          description : LanguageID not found
+        '500':
+          description : Could not created language
+          schema:
+            "$ref": "#/definitions/Languages"
+    get:
+      tags:
+      - Language
+      summary: Get all languages in the system
+      responses:
+        '200':
+          description: OK
+          schema:
+            "$ref": "#/definitions/Languages"
+  "/language/{languageId}":
+    parameters:
+    - name: languageId
+      in: path
+      required: true
+      description: ID of Language that we want to find
+      type: string
+    get:
+      tags:
+      - Language
+      summary: Get Language with given ID
+      responses:
+        '200':
+          description: Language is found
+        '500':
+          description: Could not retrieve this language id
+    put:
+      summary: Update Language with given ID
+      tags:
+      - Language
+      parameters:
+      - name: tonguetwister
+        in: body
+        description: TongueTwister with new values of properties
+        schema:
+          "$ref": "#/definitions/Languages"
+      responses:
+        '200':
+          description: Language is updated
+        '400':
+          description : Content not found
+        '401':
+          description : LanguageID not found
+        '500':
+          description : Could not update this language id    
+    delete:
+      summary: Delete Language with given ID
+      tags:
+      - Language
+      responses:
+        '200':
+          description: Language is deleted
+        '400':
+          description : The id can not be empty
+        '500':
+          description : Could not delete this language id
+    
+definitions:
+  TongueTwister:
+    required:
+    - phrase
+    - language
+    properties:
+      phrase:
+        type: string
+        uniqueItems: true
+      languageid:
+        type: string
+  TongueTwisters:
+    type: array
+    "$ref": "#/definitions/TongueTwister"
+  Language:
+    required:
+    - language
+    - codelang
+    properties:
+      language:
+        type: string
+        uniqueItems: true
+      codelang:
+        type: string
+        uniqueItems : true
+  Languages:
+    type: array
+    "$ref": "#/definitions/Language"
