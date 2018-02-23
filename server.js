@@ -3,10 +3,22 @@ const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const cors = require('cors');
 const yaml = require('yamljs');
 
-//Connect to database
-const db = mongoose.connect('mongodb://localhost/tonguetwister');
+//mongodb://mongo/tonguetwisterdb
+const dbURI = 'mongodb://localhost/tonguetwister';
+//Set up default mongoose connection
+mongoose.connect(dbURI); 
+// Get Mongoose to use the global promise library
+mongoose.Promise = global.Promise;
+
+mongoose.connection.on('connected', () =>{
+    console.log('Mongoose connect success at '+dbURI);
+});
+mongoose.connection.on('error', (err) =>{
+    console.log('Mongoose connect error '+err);
+});
 
 //swagger
 const swaggerUi = require('swagger-ui-express');

@@ -32,8 +32,10 @@
   "homepage": "https://github.com/ttang02/tongue-twister-api#readme",
   "dependencies": {
     "body-parser": "^1.18.2",
+    "cors": "^2.8.4",
     "express": "^4.16.2",
     "mongoose": "^5.0.6",
+    "nodemon": "^1.15.1",
     "swagger-ui-express": "^2.0.15",
     "yamljs": "^0.3.0"
   }
