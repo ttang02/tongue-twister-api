@@ -8,10 +8,14 @@ services:
       - "3000:3000"
     depends_on:
       - mongo
+    environment: 
+      - VIRTUAL_HOST=tonguetwister.api.thanhlamtang.com
+      - LETSENCRYPT_HOST=tonguetwister.api.thanhlamtang.com
+      - LETSENRYPT_EMAIL=thanh-lam@hotmail.fr
   mongo:
     container_name : mongo
     image : mongo
     volumes: 
-      - ./mongo:/data/db
+      - /mongo:/data/db
     ports : 
       - "27017:27017"
