@@ -1,18 +1,17 @@
-version: '2.1'
+version: '2'
 services:
-  tongue-twister-api:
+  tongue-twister-back:
     image: tongue-twister-api
-    container_name: tongue-twister-api
+    container_name : tongue-twister-api
     build: .
-    environment:
-      NODE_ENV: production
     ports:
-      - 3000:3000
-    networks: 
-      - db
-    external_links: 
+      - "3000:3000"
+    depends_on:
       - mongo
-  
-networks: 
-  db :
-    external: true
+  mongo:
+    container_name : mongo
+    image : mongo
+    volumes: 
+      - ./mongo:/data/db
+    ports : 
+      - "27017:27017"
