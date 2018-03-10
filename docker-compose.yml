@@ -9,8 +9,8 @@ services:
     depends_on:
       - mongo
     environment: 
-      - VIRTUAL_HOST=tonguetwister.api.thanhlamtang.com
-      - LETSENCRYPT_HOST=tonguetwister.api.thanhlamtang.com
+      - VIRTUAL_HOST=tonguetwisterapi.thanhlamtang.com
+      - LETSENCRYPT_HOST=tonguetwisterapi.thanhlamtang.com
       - LETSENRYPT_EMAIL=thanh-lam@hotmail.fr
   mongo:
     container_name : mongo

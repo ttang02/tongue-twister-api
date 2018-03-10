@@ -69,7 +69,7 @@ exports.delete = function(req, res){
     if(!req.params.langageId){
         res.status(400).send({message : "languageid can not be empty"});
     }
-    Language({ _id : res.params.languageId})
+    Language.remove({ _id : res.params.languageId})
         .then(() =>{
             res.status(200).send({message: 'This Language is deleted'});
         })

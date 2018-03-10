@@ -103,7 +103,7 @@ exports.delete = function(req, res){
     if(!req.params.ttId){
         res.status(400).send({message : "ttId can not be empty"});
     }
-    TongueTwisters({ _id : res.params.ttId})
+    TongueTwisters.remove({ _id : res.params.ttId})
         .then(() =>{
             res.status(200).send({message: 'This tongue twister is deleted'});
         })

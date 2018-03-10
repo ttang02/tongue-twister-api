@@ -7,14 +7,17 @@ const cors = require('cors');
 const yaml = require('yamljs');
 
 //mongodb://mongo/tonguetwisterdb
-const dbURI = 'mongodb://mongo:27017/tonguetwister';
+const dbURI = 'mongodb://localhost:27017/tonguetwister';
 //Set up default mongoose connection
-mongoose.connect(dbURI, function(err){
-  if(err){
-    console.log(err);
-  }
-});
-
+var connectWithRetry = function(){
+  return mongoose.connect(dbURI, (err) => {
+    if(err){
+      console.log('Failed to connect to mongo on startup - retrying in 5 sec');
+      setTimeout(connectWithRetry, 5000);
+    }
+  });
+}
+connectWithRetry();
 //swagger
 const swaggerUi = require('swagger-ui-express');
 const swaggerdoc = yaml.load('./swagger/swagger.yaml');
