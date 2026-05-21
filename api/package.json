@@ -14,14 +14,13 @@
     "@elysiajs/cors": "^1.4.0",
     "@elysiajs/node": "^1.4.0",
     "@elysiajs/swagger": "^1.3.0",
-    "better-sqlite3": "^11.9.1",
+    "@libsql/client": "^0.14.0",
     "drizzle-orm": "^0.41.0",
     "elysia": "^1.4.0",
     "groq-sdk": "^0.13.0",
     "zod": "^3.24.4"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.15.21",
     "drizzle-kit": "^0.30.6",
     "tsx": "^4.19.4",
