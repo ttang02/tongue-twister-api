@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { motion } from 'motion/react'
 import type { Language, Difficulty } from '@/store/gameStore'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -21,10 +22,22 @@ async function fetchScores(lang: Language, difficulty?: Difficulty): Promise<Sco
   return json.data
 }
 
+const MEDALS = ['🥇', '🥈', '🥉']
+
 interface Props {
   language:   Language
   difficulty?: Difficulty
-  highlight?: number   // score id to highlight
+  highlight?: number
+}
+
+function SkeletonRow() {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="skeleton w-6 h-4" />
+      <div className="skeleton flex-1 h-4" />
+      <div className="skeleton w-12 h-4" />
+    </div>
+  )
 }
 
 export function ScoreBoard({ language, difficulty, highlight }: Props) {
@@ -36,47 +49,78 @@ export function ScoreBoard({ language, difficulty, highlight }: Props) {
   })
 
   if (isLoading) {
-    return <div className="text-slate-400 text-center py-8 animate-pulse">Chargement…</div>
+    return (
+      <div className="divide-y divide-white/5">
+        {Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
+      </div>
+    )
   }
 
   if (!data || data.length === 0) {
-    return <p className="text-slate-400 text-center py-8">{t('leaderboard.no_scores')}</p>
+    return (
+      <div className="flex flex-col items-center gap-3 py-12 text-slate-500">
+        <span className="text-4xl">🏆</span>
+        <p className="text-sm">{t('leaderboard.no_scores')}</p>
+      </div>
+    )
   }
 
+  const topScore = data[0]?.score ?? 1
+
   return (
-    <div className="w-full overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-slate-400 border-b border-slate-700">
-            <th className="py-2 px-3 text-left">#</th>
-            <th className="py-2 px-3 text-left">{t('leaderboard.player')}</th>
-            <th className="py-2 px-3 text-right">{t('leaderboard.score')}</th>
-            <th className="py-2 px-3 text-right hidden sm:table-cell">{t('leaderboard.accuracy')}</th>
-            <th className="py-2 px-3 text-right hidden sm:table-cell">{t('leaderboard.time')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, i) => (
-            <tr
-              key={row.id}
-              className={`
-                border-b border-slate-800 transition-colors
-                ${row.id === highlight ? 'bg-indigo-900/40 text-white font-bold' : 'text-slate-300 hover:bg-slate-800'}
-              `}
-            >
-              <td className="py-2 px-3 text-slate-500">{i + 1}</td>
-              <td className="py-2 px-3 font-medium truncate max-w-[120px]">{row.player_name}</td>
-              <td className="py-2 px-3 text-right font-mono text-indigo-400">{row.score}</td>
-              <td className="py-2 px-3 text-right hidden sm:table-cell">
+    <div className="divide-y divide-white/5">
+      {data.map((row, i) => {
+        const isHighlighted = row.id === highlight
+        const barWidth = Math.round((row.score / topScore) * 100)
+
+        return (
+          <motion.div
+            key={row.id}
+            className={`relative flex items-center gap-3 px-4 py-3 transition-colors ${isHighlighted ? 'bg-white/8' : 'hover:bg-white/4'}`}
+            initial={{ opacity: 0, x: -12 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.05, duration: 0.3 }}
+          >
+            {/* Subtle score bar */}
+            <div
+              className="absolute inset-y-0 left-0 opacity-10 rounded-r-full transition-all duration-700"
+              style={{ width: `${barWidth}%`, background: 'rgb(var(--p))' }}
+            />
+
+            {/* Rank */}
+            <span className="relative text-base w-7 text-center shrink-0 select-none">
+              {i < 3 ? MEDALS[i] : <span className="text-slate-500 text-sm">{i + 1}</span>}
+            </span>
+
+            {/* Player name */}
+            <span className={`relative flex-1 font-semibold truncate text-sm ${isHighlighted ? 'text-white' : 'text-slate-300'}`}>
+              {row.player_name}
+              {isHighlighted && (
+                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-md font-bold"
+                      style={{ background: 'rgb(var(--p)/0.25)', color: 'rgb(var(--p))' }}>
+                  toi
+                </span>
+              )}
+            </span>
+
+            {/* Stats */}
+            <div className="relative flex items-center gap-3 text-right shrink-0">
+              <span className="hidden sm:block text-slate-500 text-xs tabular-nums">
                 {Math.round(row.accuracy * 100)}%
-              </td>
-              <td className="py-2 px-3 text-right hidden sm:table-cell">
+              </span>
+              <span className="hidden sm:block text-slate-500 text-xs tabular-nums">
                 {(row.elapsed_ms / 1000).toFixed(1)}s
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </span>
+              <span
+                className="font-black text-base tabular-nums"
+                style={{ color: 'rgb(var(--p))' }}
+              >
+                {row.score}
+              </span>
+            </div>
+          </motion.div>
+        )
+      })}
     </div>
   )
 }

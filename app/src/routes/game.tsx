@@ -14,10 +14,47 @@ import type { Phrase } from '@/store/gameStore'
 import { useSpeech } from '@/hooks/useSpeech'
 import { useGameTimer } from '@/hooks/useGameTimer'
 import { computeAccuracy } from '@/hooks/useAccuracy'
+import { useCountUp } from '@/hooks/useCountUp'
 
 export const Route = createFileRoute('/game')({ component: GamePage })
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+
+function SuccessPanel({ score, accuracy, t }: { score: number; accuracy: number; t: (k: string) => string }) {
+  const displayed = useCountUp(score, 900)
+  return (
+    <motion.div
+      key="success"
+      className="text-center space-y-4 w-full pop-in"
+      aria-live="assertive"
+    >
+      <motion.p
+        className="text-6xl"
+        animate={{ rotate: [0, -15, 15, -8, 8, 0], scale: [1, 1.2, 1] }}
+        transition={{ duration: 0.7 }}
+      >
+        🎉
+      </motion.p>
+      <p className="text-3xl font-black text-gradient glow-text">{t('game.success')}</p>
+
+      {/* Score badge */}
+      <div className="inline-flex flex-col items-center gap-1 px-8 py-4 rounded-2xl glow-box"
+           style={{ background: 'rgb(var(--p) / 0.12)' }}>
+        <span className="text-5xl font-black tabular-nums" style={{ color: 'rgb(var(--p))' }}>
+          {displayed}
+        </span>
+        <span className="text-xs uppercase tracking-widest text-slate-400 font-semibold">points</span>
+      </div>
+
+      {/* Accuracy pill */}
+      <div className="flex justify-center gap-2 text-sm text-slate-400">
+        <span className="px-3 py-1 rounded-full" style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80' }}>
+          ✓ {Math.round(accuracy * 100)}% précision
+        </span>
+      </div>
+    </motion.div>
+  )
+}
 
 function GamePage() {
   const { t } = useTranslation()
@@ -169,26 +206,7 @@ function GamePage() {
       {/* Result feedback */}
       <AnimatePresence mode="wait">
         {isSuccess && (
-          <motion.div
-            key="success"
-            className="text-center space-y-3 w-full"
-            initial={{ opacity: 0, scale: 0.7 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-            aria-live="assertive"
-          >
-            <p className="text-5xl">🎉</p>
-            <p className="text-3xl font-extrabold text-white">{t('game.success')}</p>
-            <div
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl"
-              style={{ background: 'rgb(var(--p) / 0.2)', color: 'rgb(var(--p))' }}
-            >
-              <span className="text-2xl font-black">{score}</span>
-              <span className="text-sm opacity-70">pts</span>
-              <span className="text-slate-400 text-sm">·</span>
-              <span className="text-sm opacity-70">{Math.round(accuracy * 100)}% précision</span>
-            </div>
-          </motion.div>
+          <SuccessPanel score={score ?? 0} accuracy={accuracy} t={t} />
         )}
 
         {isFailed && (

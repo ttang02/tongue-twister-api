@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
-/* ── CSS custom properties — overridden by [data-lang] ────────────────────── */
+/* ── CSS custom properties ─────────────────────────────────────────────────── */
 :root {
-  --p:    99 102 241;   /* primary RGB (indigo default) */
+  --p:    99 102 241;
   --dark: 15 23 42;
   --mid:  30 27 75;
 }
-[data-lang="fr"] { --p: 59 130 246;  --dark: 12 26 58;   --mid: 30 58 138;  }
-[data-lang="en"] { --p: 239 68 68;   --dark: 50 10 10;   --mid: 127 29 29;  }
-[data-lang="ko"] { --p: 234 179 8;   --dark: 45 35 5;    --mid: 113 87 4;   }
-[data-lang="vi"] { --p: 34 197 94;   --dark: 5 40 20;    --mid: 20 83 45;   }
+[data-lang="fr"] { --p: 59 130 246;  --dark: 8 20 50;    --mid: 23 48 115; }
+[data-lang="en"] { --p: 239 68 68;   --dark: 40 8 8;     --mid: 110 22 22; }
+[data-lang="ko"] { --p: 234 179 8;   --dark: 38 28 2;    --mid: 100 74 3;  }
+[data-lang="vi"] { --p: 34 197 94;   --dark: 3 32 16;    --mid: 15 66 36;  }
 
-/* ── Global reset & base ──────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; }
 
 html {
   -webkit-tap-highlight-color: transparent;
@@ -20,8 +20,7 @@ html {
 }
 
 body {
-  margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Helvetica, sans-serif;
   background-color: rgb(var(--dark));
   color: #f1f5f9;
   -webkit-font-smoothing: antialiased;
@@ -29,70 +28,119 @@ body {
   transition: background-color 0.6s ease;
 }
 
-/* ── Animated gradient background ────────────────────────────────────────── */
+/* ── Root gradient + noise overlay ────────────────────────────────────────── */
 #root {
   min-height: 100svh;
+  position: relative;
+  isolation: isolate;
   background:
-    radial-gradient(ellipse 80% 60% at 50% -10%,
-      rgb(var(--p) / 0.25) 0%,
-      transparent 70%),
-    linear-gradient(160deg,
-      rgb(var(--dark)) 0%,
-      rgb(var(--mid) / 0.4) 50%,
-      rgb(var(--dark)) 100%);
+    radial-gradient(ellipse 90% 55% at 50% -5%,  rgb(var(--p) / 0.28) 0%, transparent 65%),
+    radial-gradient(ellipse 60% 40% at 90% 80%,  rgb(var(--p) / 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 35% at 10% 100%, rgb(var(--p) / 0.08) 0%, transparent 60%),
+    linear-gradient(170deg, rgb(var(--dark)) 0%, rgb(var(--mid) / 0.5) 50%, rgb(var(--dark)) 100%);
   transition: background 0.7s ease;
 }
 
-/* ── Glassmorphism card ───────────────────────────────────────────────────── */
-.glass {
-  background: rgb(255 255 255 / 0.05);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  border: 1px solid rgb(255 255 255 / 0.1);
+/* Subtle noise texture */
+#root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: -1;
 }
 
-/* ── Primary colour helpers (driven by CSS vars) ──────────────────────────── */
+/* ── Custom scrollbar ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(var(--p) / 0.35); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--p) / 0.6); }
+
+/* ── Glassmorphism ─────────────────────────────────────────────────────────── */
+.glass {
+  background: rgb(255 255 255 / 0.05);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid rgb(255 255 255 / 0.09);
+}
+
+/* ── Gradient text ─────────────────────────────────────────────────────────── */
+.text-gradient {
+  background: linear-gradient(135deg, rgb(var(--p)), #fff 60%, rgb(var(--p) / 0.7));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Primary button ────────────────────────────────────────────────────────── */
 .btn-primary {
-  background-color: rgb(var(--p));
+  background: linear-gradient(135deg, rgb(var(--p)), rgb(var(--p) / 0.75));
   color: #fff;
   font-weight: 700;
   border-radius: 1rem;
   padding: 0.75rem 1.5rem;
-  transition: opacity 0.15s, transform 0.1s;
+  border: 1px solid rgb(var(--p) / 0.5);
+  box-shadow: 0 4px 20px rgb(var(--p) / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.15);
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
   cursor: pointer;
-  border: none;
 }
-.btn-primary:hover  { opacity: 0.9; }
+.btn-primary:hover  { opacity: 0.92; box-shadow: 0 6px 28px rgb(var(--p) / 0.45); }
 .btn-primary:active { transform: scale(0.96); }
-.btn-primary:disabled { opacity: 0.4; cursor: default; transform: none; }
+.btn-primary:disabled { opacity: 0.35; cursor: default; transform: none; }
 
-.ring-primary { --tw-ring-color: rgb(var(--p) / 0.6); }
+/* ── Glow helpers ──────────────────────────────────────────────────────────── */
+.glow-text { text-shadow: 0 0 30px rgb(var(--p) / 0.6); }
+.glow-box  { box-shadow: 0 0 0 1px rgb(var(--p) / 0.3), 0 8px 32px rgb(var(--p) / 0.2); }
 
-/* ── Shake animation ──────────────────────────────────────────────────────── */
+/* ── Skeleton loader ───────────────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg,
+    rgb(255 255 255 / 0.05) 0%,
+    rgb(255 255 255 / 0.1)  50%,
+    rgb(255 255 255 / 0.05) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* ── Shake ─────────────────────────────────────────────────────────────────── */
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
-  15%  { transform: translateX(-8px) rotate(-1deg); }
-  35%  { transform: translateX(8px)  rotate(1deg); }
+  15%  { transform: translateX(-9px) rotate(-0.8deg); }
+  35%  { transform: translateX(9px)  rotate(0.8deg); }
   55%  { transform: translateX(-5px); }
   75%  { transform: translateX(5px); }
 }
 .shake { animation: shake 0.45s ease both; }
 
-/* ── Pulse glow (mic recording) ───────────────────────────────────────────── */
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--p) / 0.5); }
-  50%       { box-shadow: 0 0 0 18px rgb(var(--p) / 0); }
-}
-.glow-pulse { animation: glow-pulse 1s ease-in-out infinite; }
-
-/* ── Slide-up entrance ────────────────────────────────────────────────────── */
+/* ── Slide-up ──────────────────────────────────────────────────────────────── */
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(22px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.slide-up { animation: slide-up 0.4s ease both; }
+.slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
-/* ── Reduced motion ───────────────────────────────────────────────────────── */
+/* ── Pop-in ────────────────────────────────────────────────────────────────── */
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.pop-in { animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* ── Fade-up stagger util ──────────────────────────────────────────────────── */
+.stagger > * { animation: slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger > *:nth-child(4) { animation-delay: 0.20s; }
+
+/* ── Reduced motion ────────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
