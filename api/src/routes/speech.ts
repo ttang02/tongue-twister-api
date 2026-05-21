@@ -1,48 +1,44 @@
-import { Hono } from 'hono'
-import OpenAI from 'openai'
+import { Elysia, t } from 'elysia'
+import Groq from 'groq-sdk'
 
-const app = new Hono()
+const SUPPORTED_LANGS = ['fr', 'en', 'ko', 'vi'] as const
+type Lang = (typeof SUPPORTED_LANGS)[number]
 
-const LANGUAGE_CODES: Record<string, string> = {
-  fr: 'fr', en: 'en', ko: 'ko', vi: 'vi',
-}
+const MAX_BYTES = 10 * 1024 * 1024  // 10 MB
 
-const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
+// whisper-large-v3-turbo: fast multilingual (fr/en/ko/vi all supported)
+const WHISPER_MODEL = 'whisper-large-v3-turbo'
 
-app.post('/transcribe', async (c) => {
-  const form = await c.req.formData()
-  const audioFile = form.get('audio')
-  const language  = form.get('language')?.toString() ?? 'en'
+export const speechRoute = new Elysia({ prefix: '/speech' })
 
-  if (!audioFile || typeof audioFile === 'string') {
-    return c.json({ error: 'Missing audio file' }, 400)
-  }
+  .post('/transcribe', async ({ body, error }) => {
+    const { audio, language } = body
 
-  const blob = audioFile as File
-  if (blob.size > MAX_BYTES) {
-    return c.json({ error: 'Audio file too large (max 10 MB)' }, 413)
-  }
-  if (blob.size < 1000) {
-    return c.json({ error: 'Audio too short or silent' }, 422)
-  }
+    if (audio.size > MAX_BYTES) return error(413, { error: 'Audio too large (max 10 MB)' })
+    if (audio.size < 500)       return error(422, { error: 'Audio too short or silent' })
 
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) return c.json({ error: 'Speech recognition not configured' }, 503)
+    const apiKey = process.env.GROQ_API_KEY
+    if (!apiKey) return error(503, { error: 'Speech recognition not configured' })
 
-  const openai = new OpenAI({ apiKey })
+    const lang: Lang = (SUPPORTED_LANGS as readonly string[]).includes(language)
+      ? (language as Lang)
+      : 'en'
 
-  const whisperLang = LANGUAGE_CODES[language] ?? 'en'
+    const groq = new Groq({ apiKey })
 
-  const transcription = await openai.audio.transcriptions.create({
-    file:     blob,
-    model:    'whisper-1',
-    language: whisperLang,
-    response_format: 'verbose_json',
+    const result = await groq.audio.transcriptions.create({
+      file:     audio,
+      model:    WHISPER_MODEL,
+      language: lang,
+      response_format: 'json',
+    })
+
+    return { transcript: result.text.trim().toLowerCase() }
+  }, {
+    body: t.Object({
+      audio:    t.File({
+        type: ['audio/webm', 'audio/ogg', 'audio/wav', 'audio/mp4', 'audio/mpeg'],
+      }),
+      language: t.String({ default: 'en' }),
+    }),
   })
-
-  const text = transcription.text.trim().toLowerCase()
-
-  return c.json({ transcript: text })
-})
-
-export default app

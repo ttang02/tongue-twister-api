@@ -6,7 +6,7 @@ Un jeu de virelangues multlingue où le joueur prononce des phrases dans son mic
 
 ## Fonctionnalités
 
-- **Micro intégré** — capture audio via MediaRecorder API, transcription par Whisper (OpenAI)
+- **Micro intégré** — capture audio via MediaRecorder API, transcription par Groq Whisper (< 300 ms)
 - **Timer de jeu** — compte à rebours par difficulté (30 s / 20 s / 10 s), animé en temps réel
 - **Validation stricte** — la phrase doit être reconnue avec un seuil de précision ; sinon on recommence, sans score enregistré
 - **Score** — calculé sur la précision et le temps restant à la validation
@@ -27,10 +27,10 @@ Un jeu de virelangues multlingue où le joueur prononce des phrases dans son mic
 | Animation | Motion v12 (Framer Motion)                               |
 | i18n      | react-i18next                                            |
 | PWA       | vite-plugin-pwa                                          |
-| Backend   | Bun + Hono.js                                            |
+| Backend   | Bun + **Elysia.js**                                      |
 | ORM       | Drizzle ORM                                              |
 | Base de données | SQLite (dev) / Turso LibSQL (prod)                 |
-| Speech    | MediaRecorder API + OpenAI Whisper, Web Speech API (fallback) |
+| Speech    | MediaRecorder API + **Groq Whisper** (< 300 ms), Web Speech API (fallback) |
 
 ---
 
@@ -62,7 +62,7 @@ cp .env.example .env
 Renseigner le fichier `.env` :
 
 ```env
-OPENAI_API_KEY=sk-...
+GROQ_API_KEY=gsk_...
 DATABASE_URL=file:./dev.db        # SQLite local
 # DATABASE_URL=libsql://...       # Turso en prod
 TURSO_AUTH_TOKEN=                 # laisser vide en dev

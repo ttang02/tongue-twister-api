@@ -1,36 +1,51 @@
-import { Hono } from 'hono'
-import { secureHeaders } from 'hono/secure-headers'
-import { logger } from 'hono/logger'
-import { prettyJSON } from 'hono/pretty-json'
-import { corsMiddleware } from './middleware/cors'
-import phrasesRoute from './routes/phrases'
-import scoresRoute  from './routes/scores'
-import speechRoute  from './routes/speech'
+import { Elysia } from 'elysia'
+import { cors }    from '@elysiajs/cors'
+import { swagger } from '@elysiajs/swagger'
+import { phrasesRoute } from './routes/phrases'
+import { scoresRoute }  from './routes/scores'
+import { speechRoute }  from './routes/speech'
 
-const app = new Hono()
+const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',')
 
-app.use('*', logger())
-app.use('*', secureHeaders())
-app.use('*', corsMiddleware)
-app.use('*', prettyJSON())
+const app = new Elysia()
 
-app.get('/', (c) => c.json({ status: 'ok', version: '1.0.0' }))
+  .use(cors({
+    origin:  (request) => {
+      const origin = request.headers.get('origin') ?? ''
+      return allowedOrigins.includes(origin)
+    },
+    methods:         ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders:  ['Content-Type'],
+    maxAge:          600,
+  }))
 
-app.route('/phrases', phrasesRoute)
-app.route('/scores',  scoresRoute)
-app.route('/speech',  speechRoute)
+  .use(swagger({
+    documentation: {
+      info: {
+        title:       'Tongue Twister API',
+        version:     '1.0.0',
+        description: 'Multilingual tongue twister game — phrases, scores & speech transcription',
+      },
+      tags: [
+        { name: 'phrases', description: 'Tongue twister library' },
+        { name: 'scores',  description: 'Leaderboard & score submission' },
+        { name: 'speech',  description: 'Audio transcription via Groq Whisper' },
+      ],
+    },
+    path: '/docs',
+  }))
 
-app.onError((err, c) => {
-  console.error(err)
-  return c.json({ error: 'Internal server error' }, 500)
-})
+  .get('/', () => ({ status: 'ok', version: '1.0.0', runtime: 'bun + elysia' }))
 
-app.notFound((c) => c.json({ error: 'Not found' }, 404))
+  .use(phrasesRoute)
+  .use(scoresRoute)
+  .use(speechRoute)
 
-const port = Number(process.env.PORT ?? 3000)
-console.log(`Server running on http://localhost:${port}`)
+  .onError(({ error, code }) => {
+    console.error(`[${code}]`, error)
+    return { error: 'Internal server error' }
+  })
 
-export default {
-  port,
-  fetch: app.fetch,
-}
+  .listen(Number(process.env.PORT ?? 3000))
+
+console.log(`Server running on http://localhost:${app.server?.port}`)

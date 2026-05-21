@@ -66,10 +66,10 @@ Un jeu de virelangues multilingue où le joueur prononce des phrases dans son mi
 └─────────────────────────────┼───────────────────────────────┘
                               │ HTTPS / WebSocket
               ┌───────────────▼──────────────────┐
-              │        BACKEND  (Hono + Bun)      │
+              │        BACKEND  (Elysia + Bun)      │
               │                                   │
               │  POST /speech/transcribe           │
-              │    └─► OpenAI Whisper API          │
+              │    └─► Groq Whisper API          │
               │                                   │
               │  GET  /phrases                    │
               │  POST /scores                     │
@@ -102,7 +102,7 @@ Joueur relâche le bouton OU silence détecté
 POST /speech/transcribe  { audio: base64, language: 'fr' }
     │
     ▼
-Hono → OpenAI Whisper → { text: "un chasseur sachant..." }
+Elysia → Groq Whisper → { text: "un chasseur sachant..." }
     │
     ▼
 fuzzyMatch(transcript, targetPhrase) → { accuracy: 0.93 }
@@ -122,7 +122,7 @@ fuzzyMatch(transcript, targetPhrase) → { accuracy: 0.93 }
 - **Path A — Whisper (principal, universel)**
   - MediaRecorder capture l'audio en `audio/webm;codecs=opus`
   - Envoyé en base64 au backend dès que le joueur relâche le bouton
-  - Le backend transmet à `openai.audio.transcriptions.create` avec `model: "whisper-1"` et `language` explicite
+  - Le backend transmet à `groq.audio.transcriptions.create` avec `model: "whisper-large-v3-turbo"` et `language` explicite
   - Latence cible : < 2 secondes
   - Fonctionne sur tous les navigateurs et tous les appareils
 
@@ -255,10 +255,10 @@ Résultat      : [✓vert] [orange] [✓vert] [✓vert] [✓vert] [✓vert] [rou
 | Technologie | Version | Pourquoi |
 |-------------|---------|----------|
 | **Bun** | 1.1+ | Runtime JS + SQLite natif + TypeScript sans transpile, startup < 10ms |
-| **Hono.js** | 4.x | Fastest Node/Bun framework (bench > Fastify), middleware typé, zValidator |
+| **Elysia.js** | 1.3.x | Framework natif Bun, 4× plus rapide que Hono, type-safety E2E, OpenAPI natif |
 | **Drizzle ORM** | 0.31+ | Schéma TypeScript → SQL, migrations auto, Drizzle Studio |
 | **Zod** | 3.x | Validation des body/query, génération de types automatique |
-| **OpenAI SDK** | 4.x | Client officiel Whisper, streaming, retry intégré |
+| **Groq SDK** | 0.13.x | Whisper-large-v3-turbo, < 300ms latence, API compatible OpenAI |
 | **Scalar** | latest | Interface OpenAPI 3.1 moderne en remplacement de Swagger UI |
 
 ### Base de données
@@ -559,7 +559,7 @@ Top 10 par langue, toutes phrases confondues.
 ### Diagramme de séquence
 
 ```
-Joueur          useSpeech hook       Backend          OpenAI Whisper
+Joueur          useSpeech hook       Backend          Groq Whisper
   │                   │                 │                    │
   │ appui bouton mic  │                 │                    │
   │──────────────────►│                 │                    │
@@ -1077,14 +1077,14 @@ Règles clés :
 
 | Vecteur | Mesure |
 |---------|--------|
-| Rate limiting API | 30 req/min par IP via Hono middleware (`hono-rate-limiter`) |
+| Rate limiting API | 30 req/min par IP via Elysia middleware (`@elysiajs/rate-limit`) |
 | Validation entrées | Zod sur tous les body/query (longueur max, enum strict) |
 | Vérification score | Score recalculé côté serveur, rejeté si écart > 5% |
 | Nom joueur | Sanitisé, max 30 caractères, pas de HTML |
 | Fichier audio | Max 10 Mo, MIME type vérifié, rejeté si hors plage |
 | CORS | `allowedOrigins: ['https://tongue-twister.app']` en production |
-| Headers | `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options` via Hono `secureHeaders()` |
-| Clé OpenAI | Jamais exposée côté client — proxy uniquement via le backend |
+| Headers | `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options` via Elysia `@elysiajs/static` |
+| Clé Groq | Jamais exposée côté client — proxy uniquement via le backend |
 
 ---
 
@@ -1171,7 +1171,7 @@ test('parcours complet — joueur réussit en français', async ({ page }) => {
 
 ```
 Cloudflare Pages       Cloudflare Workers       Turso (LibSQL)
-   (frontend)       ←───  (backend Hono)   ←───  (database)
+   (frontend)       ←───  (backend Elysia)   ←───  (database)
   tongue-twister.app    api.tongue-twister.app   ams.turso.io
 ```
 
@@ -1231,7 +1231,7 @@ database_id  = "..."
 
 | # | Nom | Durée estimée | Livrables clés |
 |---|-----|---------------|----------------|
-| **M1** | Infrastructure backend | 3 jours | Bun + Hono init, Drizzle schema, migrations, seed data, routes `/phrases` + `/scores`, Scalar docs, tests unitaires routes |
+| **M1** | Infrastructure backend | 3 jours | Bun + Elysia init, Drizzle schema, migrations, seed data, routes `/phrases` + `/scores`, Scalar docs, tests unitaires routes |
 | **M2** | Infrastructure frontend | 2 jours | Vite + React 19, Tailwind v4, TanStack Router (3 routes), Zustand store, i18n 4 langues, PWA manifest + icônes |
 | **M3** | Pipeline audio | 4 jours | `useSpeech` hook (MediaRecorder + Whisper), proxy `/speech/transcribe` backend, Web Speech API fallback, `<Waveform />` |
 | **M4** | Timer de jeu | 2 jours | `useGameTimer` hook, `<GameTimer />` animé, timeout flow, vibration API, intégration store |
