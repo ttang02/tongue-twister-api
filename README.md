@@ -28,11 +28,12 @@ Un jeu de virelangues multilingue où le joueur prononce des phrases dans son mi
 | Animation | Motion v12 (Framer Motion) |
 | i18n | react-i18next + détection automatique |
 | PWA | vite-plugin-pwa + Workbox |
-| Backend | **Bun** + **Elysia.js** v1.3 |
+| Backend | **Node.js ≥ 18** + **Elysia.js** v1.3 |
 | Validation | TypeBox natif Elysia |
 | ORM | Drizzle ORM |
-| Base de données | SQLite/Bun (dev) · Turso LibSQL (prod) |
+| Base de données | SQLite (`better-sqlite3`) en dev · Turso LibSQL en prod |
 | Speech | MediaRecorder + **Groq Whisper** `whisper-large-v3-turbo` |
+| TypeScript runtime | `tsx` (dev) |
 
 ---
 
@@ -40,29 +41,42 @@ Un jeu de virelangues multilingue où le joueur prononce des phrases dans son mi
 
 ### Prérequis
 
-- [Bun](https://bun.sh) >= 1.1
-- Clé API [Groq](https://console.groq.com) (gratuite)
+- **Node.js** >= 18 — [nodejs.org](https://nodejs.org)
+- **npm** >= 9 (inclus avec Node.js) — ou **pnpm** / **yarn**
+- Clé API **Groq** (gratuite) — [console.groq.com](https://console.groq.com)
 
-### Installation & lancement en une commande
+### Installation & lancement
 
 ```bash
 git clone https://github.com/ttang02/tongue-twister-api.git
 cd tongue-twister-api
 
-# Installer toutes les dépendances + migrer + seeder la BDD
-bun run setup
+# 1. Installer les dépendances root
+npm install
 
-# Créer les fichiers .env
+# 2. Créer les fichiers .env
 cp api/.env.example api/.env      # → renseigner GROQ_API_KEY
 cp app/.env.example app/.env
 
-# Lancer backend + frontend simultanément
-bun run dev
+# 3. Installer les dépendances + migrer + seeder la BDD
+npm run setup
+
+# 4. Lancer backend + frontend simultanément
+npm run dev
 ```
 
 - **API** → `http://localhost:3000`
 - **App** → `http://localhost:5173`
 - **Docs API** → `http://localhost:3000/docs` (Scalar / OpenAPI)
+
+### Avec pnpm
+
+```bash
+# Remplacer npm par pnpm partout
+pnpm install
+pnpm run setup
+pnpm run dev
+```
 
 ### Variables d'environnement
 
@@ -86,31 +100,30 @@ VITE_API_URL=http://localhost:3000
 
 | Commande | Description |
 |----------|-------------|
-| `bun run dev` | Lance API + App en parallèle avec logs colorés |
-| `bun run setup` | Install + migration BDD + seed (premier démarrage) |
-| `bun run build` | Build prod API + App |
-| `bun run preview` | Preview build prod en local |
-| `bun run dev:api` | API seule |
-| `bun run dev:app` | App seule |
+| `npm run dev` | Lance API + App en parallèle avec logs colorés |
+| `npm run setup` | Install + migration BDD + seed (premier démarrage) |
+| `npm run dev:api` | API seule |
+| `npm run dev:app` | App seule |
 
 ### Scripts backend (`api/`)
 
 | Commande | Description |
 |----------|-------------|
-| `bun run dev` | Serveur en mode watch |
-| `bun run db:migrate` | Applique les migrations Drizzle |
-| `bun run db:seed` | Insère les 84 phrases de démo |
-| `bun run db:studio` | Drizzle Studio (UI base de données) |
+| `npm run dev` | Serveur en mode watch (tsx watch) |
+| `npm run start` | Serveur sans watch (production) |
+| `npm run db:generate` | Génère les migrations Drizzle |
+| `npm run db:migrate` | Applique les migrations |
+| `npm run db:seed` | Insère les 84 phrases de démo |
+| `npm run db:studio` | Drizzle Studio (UI base de données) |
 
 ### Scripts frontend (`app/`)
 
 | Commande | Description |
 |----------|-------------|
-| `bun run dev` | Dev server avec HMR |
-| `bun run build` | Build optimisé prod |
-| `bun run preview` | Prévisualise le build |
-| `bun run test` | Vitest |
-| `bun run e2e` | Tests Playwright |
+| `npm run dev` | Dev server avec HMR |
+| `npm run build` | Build optimisé prod |
+| `npm run preview` | Prévisualise le build |
+| `npm run test` | Vitest |
 
 ---
 
@@ -118,13 +131,13 @@ VITE_API_URL=http://localhost:3000
 
 ```
 tongue-twister-api/
-├── package.json          ← scripts racine (dev, setup, build)
+├── package.json          ← scripts racine (dev, setup)
 │
-├── api/                  ← backend Elysia.js
+├── api/                  ← backend Elysia.js (Node.js)
 │   ├── src/
 │   │   ├── db/
 │   │   │   ├── schema.ts     Drizzle schema (phrases + scores)
-│   │   │   ├── client.ts     SQLite client WAL
+│   │   │   ├── client.ts     better-sqlite3 + WAL
 │   │   │   ├── migrate.ts
 │   │   │   └── seed.ts       84 phrases (fr/en/ko/vi × easy/medium/hard)
 │   │   ├── routes/
@@ -132,21 +145,21 @@ tongue-twister-api/
 │   │   │   ├── scores.ts     GET /scores, POST /scores, GET /scores/top
 │   │   │   └── speech.ts     POST /speech/transcribe → Groq Whisper
 │   │   └── index.ts          entrée Elysia + CORS + Scalar docs
-│   └── drizzle.config.ts
+│   ├── drizzle.config.ts
+│   └── tsconfig.json
 │
 └── app/                  ← frontend React 19
     ├── src/
     │   ├── components/
     │   │   ├── PhraseCard.tsx       glassmorphism + quote marks colorés
     │   │   ├── MicButton.tsx        96px, ripple, états visuels complets
-    │   │   ├── GameTimer.tsx        barre glow dual-layer
     │   │   ├── GameTimer.tsx        barre glow dual-layer, haptic 5s
     │   │   ├── TranscriptDiff.tsx   chips ✓/~/✗ par mot
     │   │   ├── ScoreBoard.tsx       🥇🥈🥉 + barre de score + skeleton
     │   │   ├── Confetti.tsx         canvas particles au succès
     │   │   ├── Onboarding.tsx       3 slides glassmorphism
     │   │   ├── LanguagePicker.tsx   cartes colorées par langue
-    │   │   └── DifficultyPicker.tsx slide-in avec badge timer
+    │   │   └── DifficultyPicker.tsx slide-in avec icônes colorées
     │   ├── hooks/
     │   │   ├── useSpeech.ts         MediaRecorder + Whisper + Web Speech API
     │   │   ├── useGameTimer.ts      rAF countdown pause/resume
@@ -178,6 +191,44 @@ tongue-twister-api/
 | Safari iOS 14+ | ✅ | Groq uniquement | ✅ Add to Home Screen |
 | Chrome Android | ✅ | Groq + Web Speech API live | ✅ |
 | Samsung Browser | ✅ | Groq uniquement | ✅ |
+
+---
+
+## Dépannage
+
+### `better-sqlite3` ne compile pas
+
+Ce module est natif (C++). Si l'installation échoue :
+
+```bash
+# Installer les outils de compilation (Linux/Debian)
+sudo apt install python3 make g++ -y
+npm install
+
+# macOS — installer Xcode Command Line Tools
+xcode-select --install
+npm install
+
+# Windows — installer windows-build-tools
+npm install --global windows-build-tools
+npm install
+```
+
+### Port déjà utilisé
+
+```bash
+# Changer le port de l'API
+echo "PORT=3001" >> api/.env
+# Puis mettre à jour app/.env
+echo "VITE_API_URL=http://localhost:3001" >> app/.env
+```
+
+### La clé Groq est invalide
+
+Créer un compte gratuit sur [console.groq.com](https://console.groq.com), générer une clé API et la mettre dans `api/.env` :
+```env
+GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxx
+```
 
 ---
 

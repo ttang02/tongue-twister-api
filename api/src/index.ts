@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia'
+import { node }    from '@elysiajs/node'
 import { cors }    from '@elysiajs/cors'
 import { swagger } from '@elysiajs/swagger'
 import { phrasesRoute } from './routes/phrases'
@@ -7,7 +8,7 @@ import { speechRoute }  from './routes/speech'
 
 const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',')
 
-const app = new Elysia()
+const app = new Elysia({ adapter: node() })
 
   .use(cors({
     origin:  (request) => {
@@ -35,7 +36,7 @@ const app = new Elysia()
     path: '/docs',
   }))
 
-  .get('/', () => ({ status: 'ok', version: '1.0.0', runtime: 'bun + elysia' }))
+  .get('/', () => ({ status: 'ok', version: '1.0.0', runtime: 'node + elysia' }))
 
   .use(phrasesRoute)
   .use(scoresRoute)
