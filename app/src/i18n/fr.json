@@ -1,0 +1,45 @@
+{
+  "nav": { "leaderboard": "Classement", "play": "Jouer" },
+  "home": {
+    "title": "Virelangues",
+    "subtitle": "Prononce la phrase avant la fin du temps",
+    "choose_language": "Choisis ta langue"
+  },
+  "difficulty": {
+    "title": "Choisis la difficulté",
+    "easy": "Facile",
+    "medium": "Moyen",
+    "hard": "Difficile",
+    "easy_hint": "30 secondes",
+    "medium_hint": "20 secondes",
+    "hard_hint": "10 secondes"
+  },
+  "game": {
+    "hold_to_speak": "Maintiens pour parler",
+    "release_to_validate": "Relâche pour valider",
+    "processing": "Analyse en cours...",
+    "time_up": "Temps écoulé !",
+    "try_again": "Réessaie",
+    "success": "Bravo !",
+    "save_score": "Enregistrer mon score",
+    "skip": "Passer",
+    "your_score": "Ton score",
+    "accuracy": "Précision",
+    "next_phrase": "Phrase suivante",
+    "play_again": "Rejouer"
+  },
+  "leaderboard": {
+    "title": "Classement",
+    "player": "Joueur",
+    "score": "Score",
+    "accuracy": "Précision",
+    "time": "Temps",
+    "no_scores": "Aucun score pour l'instant. Sois le premier !"
+  },
+  "errors": {
+    "mic_denied": "Accès au micro refusé. Autorise l'accès dans les réglages du navigateur.",
+    "mic_unavailable": "Aucun micro détecté.",
+    "api_error": "Erreur de connexion. Réessaie dans un instant.",
+    "browser_unsupported": "Ton navigateur ne supporte pas la capture audio."
+  }
+}

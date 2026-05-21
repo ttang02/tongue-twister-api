@@ -1,0 +1,45 @@
+{
+  "nav": { "leaderboard": "Bảng xếp hạng", "play": "Chơi" },
+  "home": {
+    "title": "Câu Nói Lắp",
+    "subtitle": "Phát âm câu trước khi hết giờ",
+    "choose_language": "Chọn ngôn ngữ của bạn"
+  },
+  "difficulty": {
+    "title": "Chọn độ khó",
+    "easy": "Dễ",
+    "medium": "Trung bình",
+    "hard": "Khó",
+    "easy_hint": "30 giây",
+    "medium_hint": "20 giây",
+    "hard_hint": "10 giây"
+  },
+  "game": {
+    "hold_to_speak": "Giữ để nói",
+    "release_to_validate": "Thả để xác nhận",
+    "processing": "Đang phân tích...",
+    "time_up": "Hết giờ!",
+    "try_again": "Thử lại",
+    "success": "Xuất sắc!",
+    "save_score": "Lưu điểm của tôi",
+    "skip": "Bỏ qua",
+    "your_score": "Điểm của bạn",
+    "accuracy": "Độ chính xác",
+    "next_phrase": "Câu tiếp theo",
+    "play_again": "Chơi lại"
+  },
+  "leaderboard": {
+    "title": "Bảng xếp hạng",
+    "player": "Người chơi",
+    "score": "Điểm",
+    "accuracy": "Độ chính xác",
+    "time": "Thời gian",
+    "no_scores": "Chưa có điểm nào. Hãy là người đầu tiên!"
+  },
+  "errors": {
+    "mic_denied": "Quyền truy cập micro bị từ chối. Cho phép trong cài đặt trình duyệt.",
+    "mic_unavailable": "Không phát hiện micro.",
+    "api_error": "Lỗi kết nối. Vui lòng thử lại sau.",
+    "browser_unsupported": "Trình duyệt của bạn không hỗ trợ thu âm."
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "nav": { "leaderboard": "Leaderboard", "play": "Play" },
+  "home": {
+    "title": "Tongue Twisters",
+    "subtitle": "Pronounce the phrase before time runs out",
+    "choose_language": "Choose your language"
+  },
+  "difficulty": {
+    "title": "Choose difficulty",
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard",
+    "easy_hint": "30 seconds",
+    "medium_hint": "20 seconds",
+    "hard_hint": "10 seconds"
+  },
+  "game": {
+    "hold_to_speak": "Hold to speak",
+    "release_to_validate": "Release to validate",
+    "processing": "Analysing...",
+    "time_up": "Time's up!",
+    "try_again": "Try again",
+    "success": "Well done!",
+    "save_score": "Save my score",
+    "skip": "Skip",
+    "your_score": "Your score",
+    "accuracy": "Accuracy",
+    "next_phrase": "Next phrase",
+    "play_again": "Play again"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "player": "Player",
+    "score": "Score",
+    "accuracy": "Accuracy",
+    "time": "Time",
+    "no_scores": "No scores yet. Be the first!"
+  },
+  "errors": {
+    "mic_denied": "Microphone access denied. Allow access in your browser settings.",
+    "mic_unavailable": "No microphone detected.",
+    "api_error": "Connection error. Please try again.",
+    "browser_unsupported": "Your browser does not support audio capture."
+  }
+}

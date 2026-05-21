@@ -57,3 +57,18 @@ typings/
 # dotenv environment variables file
 .env
 
+# Build outputs
+dist/
+app/dist/
+app/dev-dist/
+
+# SQLite databases
+*.db
+*.db-shm
+*.db-wal
+
+# Drizzle generated migrations
+api/drizzle/
+
+# macOS
+.DS_Store
