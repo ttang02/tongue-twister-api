@@ -62,6 +62,17 @@ dist/
 app/dist/
 app/dev-dist/
 
+# TypeScript build cache
+*.tsbuildinfo
+
+# Compiled JS artifacts alongside TS source (tsc side-output)
+app/src/**/*.js
+app/vite.config.js
+
+# Python bytecode
+__pycache__/
+*.pyc
+
 # SQLite databases
 *.db
 *.db-shm
