@@ -9,11 +9,11 @@ import type { Language, Difficulty } from '@/store/gameStore'
 
 export const Route = createFileRoute('/leaderboard')({ component: LeaderboardPage })
 
-const DIFFICULTIES: { value: Difficulty | undefined; label: string }[] = [
-  { value: undefined,  label: 'Tous' },
-  { value: 'easy',    label: '🟢 Facile' },
-  { value: 'medium',  label: '🟡 Moyen' },
-  { value: 'hard',    label: '🔴 Difficile' },
+const DIFFICULTIES: { value: Difficulty | undefined; label: string; dot?: string }[] = [
+  { value: undefined, label: 'Tous' },
+  { value: 'easy',   label: 'Facile',   dot: '#4ade80' },
+  { value: 'medium', label: 'Moyen',    dot: '#fbbf24' },
+  { value: 'hard',   label: 'Difficile', dot: '#f87171' },
 ]
 
 function LeaderboardPage() {
@@ -34,7 +34,7 @@ function LeaderboardPage() {
       transition={{ duration: 0.35 }}
     >
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold text-white">{t('leaderboard.title')}</h1>
+        <h1 className="text-2xl font-extrabold text-white font-display">{t('leaderboard.title')}</h1>
         <button
           onClick={handleReset}
           className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
@@ -52,11 +52,11 @@ function LeaderboardPage() {
             <button
               key={code}
               onClick={() => useGameStore.setState({ language: code })}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold
+                         transition-colors duration-200 cursor-pointer"
               style={{
-                background:  active ? `rgb(${theme.primary})` : 'rgba(255,255,255,0.07)',
-                color:       active ? '#fff' : '#94a3b8',
-                transform:   active ? 'scale(1.05)' : 'scale(1)',
+                background: active ? `rgb(${theme.primary})` : 'rgba(255,255,255,0.07)',
+                color:      active ? '#fff' : '#94a3b8',
               }}
             >
               {theme.flag} {code.toUpperCase()}
@@ -71,13 +71,20 @@ function LeaderboardPage() {
           <button
             key={d.value ?? 'all'}
             onClick={() => useGameStore.setState({ difficulty: d.value })}
-            className="px-3 py-1.5 rounded-lg text-sm transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm
+                       transition-colors duration-200 cursor-pointer"
             style={{
               background: diff === d.value ? 'rgb(var(--p) / 0.2)' : 'rgba(255,255,255,0.05)',
               color:      diff === d.value ? 'rgb(var(--p))' : '#94a3b8',
               fontWeight: diff === d.value ? '600' : '400',
             }}
           >
+            {d.dot && (
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: d.dot }}
+              />
+            )}
             {d.label}
           </button>
         ))}

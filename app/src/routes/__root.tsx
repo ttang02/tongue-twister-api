@@ -26,7 +26,7 @@ function RootLayout() {
           <span className="text-2xl transition-transform duration-300 group-hover:scale-110">
             {theme.flag}
           </span>
-          <span className="text-gradient glow-text">Virelangues</span>
+          <span className="text-gradient glow-text font-display">Virelangues</span>
         </Link>
 
         <div className="flex items-center gap-1">

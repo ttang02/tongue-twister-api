@@ -14,8 +14,8 @@ export function LanguagePicker({ onSelect }: Props) {
         <motion.button
           key={code}
           onClick={() => onSelect(code)}
-          className="flex flex-col items-center gap-3 p-5 rounded-2xl glass text-left
-                     focus-visible:outline-none focus-visible:ring-2"
+          className="flex flex-col items-center gap-3 p-5 rounded-2xl glass text-left cursor-pointer
+                     focus-visible:outline-none focus-visible:ring-2 hover:bg-white/8 transition-colors duration-200"
           style={{
             borderColor: `rgb(${theme.primary} / 0.35)`,
             '--tw-ring-color': `rgb(${theme.primary} / 0.6)`,

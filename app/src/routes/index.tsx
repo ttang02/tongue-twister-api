@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
+import { Mic } from 'lucide-react'
 import { LanguagePicker } from '@/components/LanguagePicker'
 import { DifficultyPicker } from '@/components/DifficultyPicker'
 import { useGameStore } from '@/store/gameStore'
@@ -29,15 +30,15 @@ function HomePage() {
       {/* Hero */}
       <div className="text-center space-y-3">
         <motion.div
-          className="text-7xl select-none"
+          className="inline-flex items-center justify-center w-20 h-20 rounded-full neon-pulse select-none"
+          style={{ background: 'rgb(var(--p) / 0.15)', color: 'rgb(var(--p))' }}
           animate={{ rotate: [0, -10, 10, -5, 5, 0] }}
           transition={{ delay: 0.9, duration: 0.7, ease: 'easeInOut' }}
+          aria-hidden
         >
-          🎤
+          <Mic size={36} strokeWidth={2} />
         </motion.div>
-        <h1
-          className="text-4xl md:text-5xl font-black tracking-tight text-gradient glow-text"
-        >
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-gradient glow-text font-display">
           {t('home.title')}
         </h1>
         <p className="text-slate-400 text-base md:text-lg max-w-sm mx-auto leading-relaxed">
@@ -78,7 +79,7 @@ function HomePage() {
           >
             <button
               onClick={() => useGameStore.setState({ phase: 'language_select' })}
-              className="text-slate-500 hover:text-slate-300 text-xs flex items-center gap-1 transition-colors"
+              className="text-slate-500 hover:text-slate-300 text-xs flex items-center gap-1 transition-colors cursor-pointer"
             >
               ← {t('home.choose_language')}
             </button>

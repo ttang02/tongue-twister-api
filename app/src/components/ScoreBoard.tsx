@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'motion/react'
+import { Trophy } from 'lucide-react'
 import type { Language, Difficulty } from '@/store/gameStore'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -59,7 +60,7 @@ export function ScoreBoard({ language, difficulty, highlight }: Props) {
   if (!data || data.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 py-12 text-slate-500">
-        <span className="text-4xl">🏆</span>
+        <Trophy size={36} strokeWidth={1.5} />
         <p className="text-sm">{t('leaderboard.no_scores')}</p>
       </div>
     )

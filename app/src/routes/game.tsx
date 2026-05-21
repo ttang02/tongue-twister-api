@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
+import { Loader2 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { PhraseCard } from '@/components/PhraseCard'
 import { MicButton } from '@/components/MicButton'
@@ -28,19 +29,21 @@ function SuccessPanel({ score, accuracy, t }: { score: number; accuracy: number;
       className="text-center space-y-4 w-full pop-in"
       aria-live="assertive"
     >
-      <motion.p
-        className="text-6xl"
-        animate={{ rotate: [0, -15, 15, -8, 8, 0], scale: [1, 1.2, 1] }}
+      <motion.div
+        className="inline-flex items-center justify-center w-16 h-16 rounded-full mx-auto"
+        style={{ background: 'rgb(var(--p) / 0.15)' }}
+        animate={{ scale: [1, 1.15, 1], rotate: [0, -8, 8, 0] }}
         transition={{ duration: 0.7 }}
+        aria-hidden
       >
-        🎉
-      </motion.p>
-      <p className="text-3xl font-black text-gradient glow-text">{t('game.success')}</p>
+        <span className="text-3xl select-none">🎉</span>
+      </motion.div>
+      <p className="text-3xl font-black text-gradient glow-text font-display">{t('game.success')}</p>
 
       {/* Score badge */}
       <div className="inline-flex flex-col items-center gap-1 px-8 py-4 rounded-2xl glow-box"
            style={{ background: 'rgb(var(--p) / 0.12)' }}>
-        <span className="text-5xl font-black tabular-nums" style={{ color: 'rgb(var(--p))' }}>
+        <span className="text-5xl font-black tabular-nums font-display" style={{ color: 'rgb(var(--p))' }}>
           {displayed}
         </span>
         <span className="text-xs uppercase tracking-widest text-slate-400 font-semibold">points</span>
@@ -168,9 +171,9 @@ function GamePage() {
 
   if (!phrase) {
     return (
-      <div className="flex flex-col items-center gap-3 text-slate-400">
-        <div className="text-3xl animate-bounce">⏳</div>
-        <p className="animate-pulse">Chargement des phrases…</p>
+      <div className="flex flex-col items-center gap-4 text-slate-400">
+        <Loader2 size={32} className="animate-spin" style={{ color: 'rgb(var(--p))' }} />
+        <p className="text-sm animate-pulse">Chargement des phrases…</p>
       </div>
     )
   }
