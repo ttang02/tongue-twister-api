@@ -5,18 +5,23 @@ interface Props {
 export function PhraseCard({ text }: Props) {
   return (
     <div
-      className="
-        w-full rounded-2xl bg-slate-800 border border-slate-700
-        p-6 md:p-10 text-center shadow-xl
-      "
+      className="glass w-full rounded-3xl px-6 py-8 md:px-10 md:py-12 text-center shadow-xl"
+      style={{ borderColor: 'rgb(var(--p) / 0.2)' }}
     >
+      {/* Decorative quote mark */}
+      <div className="text-4xl mb-3 select-none" style={{ color: 'rgb(var(--p) / 0.4)' }} aria-hidden>
+        "
+      </div>
       <p
-        className="font-bold leading-snug text-white"
-        style={{ fontSize: 'clamp(1.25rem, 4vw, 2.25rem)' }}
+        className="font-extrabold leading-snug text-white tracking-tight"
+        style={{ fontSize: 'clamp(1.3rem, 4.5vw, 2.25rem)' }}
         lang="auto"
       >
         {text}
       </p>
+      <div className="text-4xl mt-3 select-none" style={{ color: 'rgb(var(--p) / 0.4)' }} aria-hidden>
+        "
+      </div>
     </div>
   )
 }

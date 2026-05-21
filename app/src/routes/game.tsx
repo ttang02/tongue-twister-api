@@ -7,7 +7,9 @@ import { PhraseCard } from '@/components/PhraseCard'
 import { MicButton } from '@/components/MicButton'
 import { GameTimer } from '@/components/GameTimer'
 import { TranscriptDiff } from '@/components/TranscriptDiff'
+import { Confetti } from '@/components/Confetti'
 import { useGameStore, TIMER_MS } from '@/store/gameStore'
+import { LANG_THEME } from '@/constants/themes'
 import type { Phrase } from '@/store/gameStore'
 import { useSpeech } from '@/hooks/useSpeech'
 import { useGameTimer } from '@/hooks/useGameTimer'
@@ -29,7 +31,6 @@ function GamePage() {
     setResult, timeout, retry, setPlayerName, goToLeaderboard,
   } = useGameStore()
 
-  // Redirect to home if no language/difficulty set
   useEffect(() => {
     if (!language || !difficulty) navigate({ to: '/' })
   }, [language, difficulty, navigate])
@@ -37,7 +38,7 @@ function GamePage() {
   const { data: phrases } = useQuery({
     queryKey: ['phrases', language, difficulty],
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/phrases?lang=${language}&difficulty=${difficulty}&limit=10`)
+      const res = await fetch(`${API_URL}/phrases?lang=${language}&difficulty=${difficulty}&limit=20`)
       const json = await res.json() as { data: Phrase[] }
       return json.data
     },
@@ -66,7 +67,6 @@ function GamePage() {
     },
   })
 
-  // Pick a random phrase when phrases load
   useEffect(() => {
     if (phrases && phrases.length > 0 && !phrase) {
       const p = phrases[Math.floor(Math.random() * phrases.length)]!
@@ -76,12 +76,11 @@ function GamePage() {
 
   const elapsedMsRef = useRef(0)
   const startTimeRef = useRef(0)
+  const [shaking, setShaking] = useState(false)
 
   const handleTimeout = () => timeout()
-
   const timerDuration = difficulty ? TIMER_MS[difficulty] : 20_000
-  const timer = useGameTimer(timerDuration, handleTimeout)
-
+  const timer  = useGameTimer(timerDuration, handleTimeout)
   const speech = useSpeech(language ?? 'en')
 
   const handleStart = async () => {
@@ -95,7 +94,6 @@ function GamePage() {
     timer.pause()
     stopRecording()
     elapsedMsRef.current = Date.now() - startTimeRef.current
-
     try {
       const spoken = await speech.stop()
       const { accuracy: acc, wordScores: ws } = computeAccuracy(spoken, phrase?.text ?? '')
@@ -106,74 +104,106 @@ function GamePage() {
     }
   }
 
+  // Trigger shake on failure/timeout
+  useEffect(() => {
+    if (phase === 'failure' || phase === 'timeout') {
+      setShaking(true)
+      const t = setTimeout(() => setShaking(false), 500)
+      return () => clearTimeout(t)
+    }
+  }, [phase])
+
   const handleRetry = () => {
-    timer.reset()
-    speech.reset()
-    retry()
+    timer.reset(); speech.reset(); retry()
   }
 
   const handleNextPhrase = () => {
     if (phrases && phrases.length > 0) {
-      const next = phrases[Math.floor(Math.random() * phrases.length)]!
-      setPhrase(next)
+      setPhrase(phrases[Math.floor(Math.random() * phrases.length)]!)
     }
-    timer.reset()
-    speech.reset()
-    retry()
+    timer.reset(); speech.reset(); retry()
   }
+
+  const themeHex = language ? LANG_THEME[language].hex : '#6366f1'
+  const isPlaying = phase === 'recording' || phase === 'processing'
+  const isSuccess = phase === 'success'
+  const isFailed  = phase === 'failure' || phase === 'timeout'
 
   if (!phrase) {
-    return <div className="text-slate-400 animate-pulse text-center">Chargement…</div>
+    return (
+      <div className="flex flex-col items-center gap-3 text-slate-400">
+        <div className="text-3xl animate-bounce">⏳</div>
+        <p className="animate-pulse">Chargement des phrases…</p>
+      </div>
+    )
   }
 
-  const isPlaying = phase === 'recording' || phase === 'processing'
-
   return (
-    <div className="flex flex-col items-center gap-6 w-full">
+    <div className="flex flex-col items-center gap-6 w-full slide-up">
+      <Confetti active={isSuccess} primaryColor={themeHex} />
+
       {/* Timer */}
       <GameTimer percent={timer.percent} remaining={timer.remaining} />
 
-      {/* Phrase */}
-      <PhraseCard text={phrase.text} />
+      {/* Phrase card — shake on failure */}
+      <motion.div
+        className={`w-full ${shaking ? 'shake' : ''}`}
+        animate={shaking ? { x: [-8, 8, -6, 6, 0] } : { x: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <PhraseCard text={phrase.text} />
+      </motion.div>
 
       {/* Live transcript */}
-      {speech.liveTranscript && phase === 'recording' && (
-        <p className="text-slate-400 text-sm italic text-center px-2">
-          « {speech.liveTranscript} »
-        </p>
-      )}
+      <AnimatePresence>
+        {speech.liveTranscript && phase === 'recording' && (
+          <motion.p
+            className="text-slate-400 text-sm italic text-center px-2"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          >
+            « {speech.liveTranscript} »
+          </motion.p>
+        )}
+      </AnimatePresence>
 
       {/* Result feedback */}
       <AnimatePresence mode="wait">
-        {phase === 'success' && (
+        {isSuccess && (
           <motion.div
             key="success"
-            className="text-center space-y-2"
-            initial={{ opacity: 0, scale: 0.8 }}
+            className="text-center space-y-3 w-full"
+            initial={{ opacity: 0, scale: 0.7 }}
             animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             aria-live="assertive"
           >
-            <p className="text-3xl font-extrabold text-green-400">{t('game.success')}</p>
-            <p className="text-slate-300">
-              {t('game.your_score')} : <span className="font-bold text-indigo-400 text-xl">{score}</span>
-            </p>
-            <p className="text-slate-400 text-sm">
-              {t('game.accuracy')} : {Math.round(accuracy * 100)}%
-            </p>
+            <p className="text-5xl">🎉</p>
+            <p className="text-3xl font-extrabold text-white">{t('game.success')}</p>
+            <div
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl"
+              style={{ background: 'rgb(var(--p) / 0.2)', color: 'rgb(var(--p))' }}
+            >
+              <span className="text-2xl font-black">{score}</span>
+              <span className="text-sm opacity-70">pts</span>
+              <span className="text-slate-400 text-sm">·</span>
+              <span className="text-sm opacity-70">{Math.round(accuracy * 100)}% précision</span>
+            </div>
           </motion.div>
         )}
 
-        {(phase === 'failure' || phase === 'timeout') && (
+        {isFailed && (
           <motion.div
             key="fail"
-            initial={{ x: -8 }}
-            animate={{ x: [0, -8, 8, -6, 6, 0] }}
-            transition={{ duration: 0.4 }}
             className="text-center space-y-3 w-full"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
             aria-live="assertive"
           >
+            <p className="text-4xl">
+              {phase === 'timeout' ? '⏰' : '😬'}
+            </p>
             <p className="text-xl font-bold text-red-400">
-              {phase === 'timeout' ? t('game.time_up') : '😬 ' + t('game.try_again')}
+              {phase === 'timeout' ? t('game.time_up') : t('game.try_again')}
             </p>
             {phase === 'failure' && wordScores.length > 0 && (
               <TranscriptDiff
@@ -186,65 +216,73 @@ function GamePage() {
         )}
       </AnimatePresence>
 
-      {/* Mic button */}
-      {(phase === 'phrase_display' || phase === 'recording' || phase === 'processing') && (
-        <div className="flex flex-col items-center gap-2">
+      {/* Mic button (recording states) */}
+      {(phase === 'phrase_display' || isPlaying) && (
+        <div className="mt-2">
           <MicButton
             state={speech.state}
             onStart={handleStart}
             onStop={handleStop}
             disabled={phase === 'processing'}
           />
-          <p className="text-slate-400 text-xs">
-            {phase === 'recording' ? t('game.release_to_validate') : t('game.hold_to_speak')}
-          </p>
         </div>
       )}
 
       {/* Success actions */}
-      {phase === 'success' && (
-        <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+      {isSuccess && (
+        <motion.div
+          className="flex flex-col items-center gap-3 w-full max-w-xs"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
           <input
             type="text"
             placeholder="Ton prénom"
             maxLength={30}
             value={playerName}
             onChange={(e) => setPlayerName(e.target.value)}
-            className="
-              w-full rounded-xl bg-slate-800 border border-slate-700 px-4 py-3
-              text-white placeholder:text-slate-500
-              focus:outline-none focus:ring-2 focus:ring-indigo-400
-            "
+            className="w-full rounded-xl px-4 py-3 text-white placeholder:text-slate-500
+                       focus:outline-none focus:ring-2"
+            style={{
+              background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              '--tw-ring-color': 'rgb(var(--p) / 0.6)',
+            } as React.CSSProperties}
           />
           <button
             onClick={() => submitScore.mutate(playerName || 'Anonyme')}
             disabled={submitScore.isPending}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50"
+            className="btn-primary w-full text-base"
           >
             {submitScore.isPending ? '…' : t('game.save_score')}
           </button>
-          <button onClick={handleNextPhrase} className="text-slate-400 text-sm hover:text-white transition-colors">
-            {t('game.next_phrase')}
+          <button
+            onClick={handleNextPhrase}
+            className="text-slate-400 text-sm hover:text-white transition-colors"
+          >
+            {t('game.next_phrase')} →
           </button>
-        </div>
+        </motion.div>
       )}
 
       {/* Retry after failure */}
-      {(phase === 'failure' || phase === 'timeout') && (
-        <div className="flex gap-3">
-          <button
-            onClick={handleRetry}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-3 rounded-xl transition-colors"
-          >
+      {isFailed && (
+        <motion.div
+          className="flex gap-3"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+        >
+          <button onClick={handleRetry} className="btn-primary px-7">
             {t('game.try_again')}
           </button>
           <button
             onClick={handleNextPhrase}
-            className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-xl transition-colors"
+            className="px-5 py-3 rounded-2xl text-slate-300 hover:text-white transition-colors"
+            style={{ background: 'rgba(255,255,255,0.08)' }}
           >
             {t('game.next_phrase')}
           </button>
-        </div>
+        </motion.div>
       )}
     </div>
   )

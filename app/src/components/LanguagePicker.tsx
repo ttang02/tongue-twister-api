@@ -1,44 +1,45 @@
-import type { Language } from '@/store/gameStore'
-
-interface LangOption {
-  code:    Language
-  flag:    string
-  label:   string
-  native:  string
-  sample:  string
-}
-
-const OPTIONS: LangOption[] = [
-  { code: 'fr', flag: '🇫🇷', label: 'Français',    native: 'Français',    sample: 'Un chasseur sachant chasser…' },
-  { code: 'en', flag: '🇺🇸', label: 'English',      native: 'English',     sample: 'She sells seashells…' },
-  { code: 'ko', flag: '🇰🇷', label: 'Korean',       native: '한국어',       sample: '간장 공장 공장장…' },
-  { code: 'vi', flag: '🇻🇳', label: 'Vietnamese',   native: 'Tiếng Việt',  sample: 'Lúa nếp là lúa nếp nàng…' },
-]
+import { motion } from 'motion/react'
+import { LANG_THEME, type Language } from '@/constants/themes'
 
 interface Props {
   onSelect: (lang: Language) => void
 }
 
+const LANGS = Object.entries(LANG_THEME) as [Language, typeof LANG_THEME[Language]][]
+
 export function LanguagePicker({ onSelect }: Props) {
   return (
     <div className="grid grid-cols-2 gap-4 w-full max-w-lg mx-auto">
-      {OPTIONS.map((opt) => (
-        <button
-          key={opt.code}
-          onClick={() => onSelect(opt.code)}
-          className="
-            flex flex-col items-center gap-2 p-5 rounded-2xl
-            bg-slate-800 border border-slate-700
-            hover:border-indigo-500 hover:bg-slate-700
-            active:scale-95 transition-all duration-150
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400
-          "
-          aria-label={`Jouer en ${opt.label}`}
+      {LANGS.map(([code, theme], i) => (
+        <motion.button
+          key={code}
+          onClick={() => onSelect(code)}
+          className="flex flex-col items-center gap-3 p-5 rounded-2xl glass text-left
+                     focus-visible:outline-none focus-visible:ring-2"
+          style={{
+            borderColor: `rgb(${theme.primary} / 0.35)`,
+            '--tw-ring-color': `rgb(${theme.primary} / 0.6)`,
+          } as React.CSSProperties}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.07, type: 'spring', stiffness: 300, damping: 24 }}
+          whileHover={{ scale: 1.04, borderColor: `rgb(${theme.primary})` }}
+          whileTap={{ scale: 0.97 }}
+          aria-label={`Jouer en ${theme.label}`}
         >
-          <span className="text-4xl" role="img" aria-hidden>{opt.flag}</span>
-          <span className="font-bold text-white text-lg">{opt.native}</span>
-          <span className="text-slate-400 text-xs text-center line-clamp-2">{opt.sample}</span>
-        </button>
+          {/* Glow dot */}
+          <div className="flex items-center gap-2 self-start">
+            <span className="text-3xl">{theme.flag}</span>
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: `rgb(${theme.primary})` }}
+            />
+          </div>
+          <div>
+            <p className="font-extrabold text-white text-lg leading-tight">{theme.native}</p>
+            <p className="text-slate-400 text-xs mt-1 line-clamp-2">{theme.sample}</p>
+          </div>
+        </motion.button>
       ))}
     </div>
   )

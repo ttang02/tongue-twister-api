@@ -1,39 +1,30 @@
-import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'motion/react'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { RotateCcw } from 'lucide-react'
 import { ScoreBoard } from '@/components/ScoreBoard'
 import { useGameStore } from '@/store/gameStore'
+import { LANG_THEME } from '@/constants/themes'
 import type { Language, Difficulty } from '@/store/gameStore'
 
 export const Route = createFileRoute('/leaderboard')({ component: LeaderboardPage })
 
-const LANGS: { code: Language; flag: string; label: string }[] = [
-  { code: 'fr', flag: '🇫🇷', label: 'FR' },
-  { code: 'en', flag: '🇺🇸', label: 'EN' },
-  { code: 'ko', flag: '🇰🇷', label: 'KO' },
-  { code: 'vi', flag: '🇻🇳', label: 'VI' },
-]
-
 const DIFFICULTIES: { value: Difficulty | undefined; label: string }[] = [
   { value: undefined,  label: 'Tous' },
-  { value: 'easy',    label: '🟢' },
-  { value: 'medium',  label: '🟡' },
-  { value: 'hard',    label: '🔴' },
+  { value: 'easy',    label: '🟢 Facile' },
+  { value: 'medium',  label: '🟡 Moyen' },
+  { value: 'hard',    label: '🔴 Difficile' },
 ]
 
 function LeaderboardPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { language: storeLanguage, difficulty: storeDifficulty, reset } = useGameStore()
+  const { language: storeLang, difficulty: storeDiff, reset } = useGameStore()
 
-  const lang = storeLanguage ?? 'fr'
-  const diff = storeDifficulty
+  const lang = storeLang ?? 'fr'
+  const diff = storeDiff
 
-  const handleReset = () => {
-    reset()
-    navigate({ to: '/' })
-  }
+  const handleReset = () => { reset(); navigate({ to: '/' }) }
 
   return (
     <motion.div
@@ -46,51 +37,55 @@ function LeaderboardPage() {
         <h1 className="text-2xl font-extrabold text-white">{t('leaderboard.title')}</h1>
         <button
           onClick={handleReset}
-          className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm transition-colors"
+          className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
         >
-          <RefreshCw size={14} />
-          {t('game.play_again')}
+          <RotateCcw size={14} />
+          <span className="hidden sm:inline">{t('game.play_again')}</span>
         </button>
       </div>
 
       {/* Language tabs */}
       <div className="flex gap-2 flex-wrap">
-        {LANGS.map((l) => (
-          <Link
-            key={l.code}
-            to="/leaderboard"
-            onClick={() => useGameStore.setState({ language: l.code })}
-            className={`
-              px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
-              ${lang === l.code
-                ? 'bg-indigo-600 text-white'
-                : 'bg-slate-800 text-slate-400 hover:text-white'}
-            `}
-          >
-            {l.flag} {l.label}
-          </Link>
-        ))}
+        {(Object.entries(LANG_THEME) as [Language, typeof LANG_THEME[Language]][]).map(([code, theme]) => {
+          const active = lang === code
+          return (
+            <button
+              key={code}
+              onClick={() => useGameStore.setState({ language: code })}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              style={{
+                background:  active ? `rgb(${theme.primary})` : 'rgba(255,255,255,0.07)',
+                color:       active ? '#fff' : '#94a3b8',
+                transform:   active ? 'scale(1.05)' : 'scale(1)',
+              }}
+            >
+              {theme.flag} {code.toUpperCase()}
+            </button>
+          )
+        })}
       </div>
 
       {/* Difficulty filter */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {DIFFICULTIES.map((d) => (
           <button
             key={d.value ?? 'all'}
             onClick={() => useGameStore.setState({ difficulty: d.value })}
-            className={`
-              px-3 py-1.5 rounded-lg text-sm transition-colors
-              ${diff === d.value
-                ? 'bg-indigo-600 text-white font-medium'
-                : 'bg-slate-800 text-slate-400 hover:text-white'}
-            `}
+            className="px-3 py-1.5 rounded-lg text-sm transition-all"
+            style={{
+              background: diff === d.value ? 'rgb(var(--p) / 0.2)' : 'rgba(255,255,255,0.05)',
+              color:      diff === d.value ? 'rgb(var(--p))' : '#94a3b8',
+              fontWeight: diff === d.value ? '600' : '400',
+            }}
           >
             {d.label}
           </button>
         ))}
       </div>
 
-      <ScoreBoard language={lang} difficulty={diff} />
+      <div className="glass rounded-2xl overflow-hidden">
+        <ScoreBoard language={lang} difficulty={diff} />
+      </div>
     </motion.div>
   )
 }
