@@ -37,16 +37,18 @@ export const ACCURACY_THRESHOLD: Record<Language, number> = {
 }
 
 interface GameState {
-  phase:      GamePhase
-  language:   Language | null
-  difficulty: Difficulty | null
-  phrase:     Phrase | null
-  transcript: string
-  accuracy:   number
-  wordScores: number[]
-  elapsedMs:  number
-  score:      number | null
-  playerName: string
+  phase:        GamePhase
+  language:     Language | null
+  difficulty:   Difficulty | null
+  phrase:       Phrase | null
+  transcript:   string
+  accuracy:     number
+  wordScores:   number[]
+  elapsedMs:    number
+  score:        number | null
+  sessionScore: number
+  sessionCount: number
+  playerName:   string
 }
 
 interface GameActions {
@@ -64,16 +66,18 @@ interface GameActions {
 }
 
 const initialState: GameState = {
-  phase:      'language_select',
-  language:   null,
-  difficulty: null,
-  phrase:     null,
-  transcript: '',
-  accuracy:   0,
-  wordScores: [],
-  elapsedMs:  0,
-  score:      null,
-  playerName: '',
+  phase:        'language_select',
+  language:     null,
+  difficulty:   null,
+  phrase:       null,
+  transcript:   '',
+  accuracy:     0,
+  wordScores:   [],
+  elapsedMs:    0,
+  score:        null,
+  sessionScore: 0,
+  sessionCount: 0,
+  playerName:   '',
 }
 
 export const useGameStore = create<GameState & GameActions>()((set, get) => ({
@@ -95,13 +99,19 @@ export const useGameStore = create<GameState & GameActions>()((set, get) => ({
   stopRecording: () => set({ phase: 'processing' }),
 
   setResult: (transcript, accuracy, wordScores, elapsedMs) => {
-    const { language, phrase } = get()
-    const threshold = ACCURACY_THRESHOLD[language ?? 'en']
-    const success   = accuracy >= threshold
-    const score     = success && phrase
+    const { language, phrase, sessionScore, sessionCount } = get()
+    const threshold   = ACCURACY_THRESHOLD[language ?? 'en']
+    const success     = accuracy >= threshold
+    const phraseScore = success && phrase
       ? Math.round(accuracy * 1000) + Math.floor(Math.max(0, phrase.timer_s - elapsedMs / 1000)) * 10
-      : null
-    set({ transcript, accuracy, wordScores, elapsedMs, phase: success ? 'success' : 'failure', score })
+      : 0
+    set({
+      transcript, accuracy, wordScores, elapsedMs,
+      phase:        success ? 'success' : 'failure',
+      score:        success ? phraseScore : null,
+      sessionScore: success ? sessionScore + phraseScore : sessionScore,
+      sessionCount: success ? sessionCount + 1 : sessionCount,
+    })
   },
 
   timeout: () => set({ phase: 'timeout' }),
