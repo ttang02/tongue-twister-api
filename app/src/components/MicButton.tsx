@@ -48,9 +48,8 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
             ? '0 0 0 0 rgba(239,68,68,0.5)'
             : `0 8px 32px rgb(var(--p) / 0.4)`,
         }}
-        onPointerDown={(e) => {
+        onClick={() => {
           if (disabled || isProcessing) return
-          e.preventDefault()
           if (isRecording) onStop()
           else if (state === 'idle') onStart()
           else if (isError && onRetry) onRetry()

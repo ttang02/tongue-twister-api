@@ -267,7 +267,7 @@ function GamePage() {
             state={speech.state}
             onStart={handleStart}
             onStop={handleStop}
-            onRetry={() => { speech.reset(); }}
+            onRetry={() => { autoRetryCount.current = 0; speech.reset(); retry(); }}
             disabled={phase === 'processing'}
             error={speech.error}
           />
