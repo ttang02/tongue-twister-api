@@ -24,7 +24,7 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
                                          'Erreur micro — réessaie'
 
   const label =
-    isRecording  ? 'Relâche pour valider' :
+    isRecording  ? 'Appuie pour arrêter' :
     isProcessing ? 'Analyse en cours…' :
     isSuccess    ? 'Bien joué !' :
     isError      ? errorLabel :
@@ -47,9 +47,7 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
             ? '0 0 0 0 rgba(239,68,68,0.5)'
             : `0 8px 32px rgb(var(--p) / 0.4)`,
         }}
-        onPointerDown={state === 'idle' ? onStart : isError ? onRetry : undefined}
-        onPointerUp={isRecording ? onStop : undefined}
-        onPointerLeave={isRecording ? onStop : undefined}
+        onClick={isRecording ? onStop : state === 'idle' ? onStart : isError ? onRetry : undefined}
         animate={
           isRecording  ? { scale: [1, 1.06, 1] } :
           isProcessing ? { rotate: 360 }          :

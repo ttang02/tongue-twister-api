@@ -5,16 +5,8 @@ export type SpeechState = 'idle' | 'recording' | 'processing' | 'done' | 'error'
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 function getSupportedMimeType(): string {
-  const types = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/ogg;codecs=opus',
-    'audio/mp4',
-  ]
-  for (const type of types) {
-    if (MediaRecorder.isTypeSupported(type)) return type
-  }
-  return ''
+  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
+  return types.find((t) => MediaRecorder.isTypeSupported(t)) ?? ''
 }
 
 export function useSpeech(language: string) {
@@ -25,15 +17,15 @@ export function useSpeech(language: string) {
   const chunks        = useRef<Blob[]>([])
   const wsRef         = useRef<SpeechRecognition | null>(null)
 
-  const start = useCallback(async () => {
+  // Returns true on success, false on failure
+  const start = useCallback(async (): Promise<boolean> => {
     setError(null)
     setLive('')
 
-    // Check browser support
     if (!navigator.mediaDevices?.getUserMedia) {
       setError('mic_not_supported')
       setState('error')
-      return
+      return false
     }
 
     let stream: MediaStream
@@ -42,10 +34,10 @@ export function useSpeech(language: string) {
     } catch {
       setError('mic_denied')
       setState('error')
-      return
+      return false
     }
 
-    // Web Speech API live transcript (Chrome/Edge only)
+    // Web Speech API live transcript (Chrome/Edge only, optional)
     if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
       try {
         const SR = (window.SpeechRecognition ?? (window as any).webkitSpeechRecognition) as typeof SpeechRecognition
@@ -59,22 +51,18 @@ export function useSpeech(language: string) {
         }
         recognition.start()
         wsRef.current = recognition
-      } catch {
-        // Web Speech API optional — ignore if it fails
-      }
+      } catch { /* optional */ }
     }
 
     const mimeType = getSupportedMimeType()
     let mr: MediaRecorder
     try {
-      mr = mimeType
-        ? new MediaRecorder(stream, { mimeType })
-        : new MediaRecorder(stream)
+      mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
     } catch {
       setError('recorder_not_supported')
       setState('error')
       stream.getTracks().forEach((t) => t.stop())
-      return
+      return false
     }
 
     chunks.current = []
@@ -82,6 +70,7 @@ export function useSpeech(language: string) {
     mr.start(250)
     mediaRecorder.current = mr
     setState('recording')
+    return true
   }, [language])
 
   const stop = useCallback(async (): Promise<string> => {
@@ -100,8 +89,11 @@ export function useSpeech(language: string) {
           form.append('audio', blob, 'recording.webm')
           form.append('language', language)
 
-          const res  = await fetch(`${API_URL}/speech/transcribe`, { method: 'POST', body: form })
-          if (!res.ok) throw new Error('api_error')
+          const res = await fetch(`${API_URL}/speech/transcribe`, { method: 'POST', body: form })
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({})) as any
+            throw new Error(body?.error ?? `http_${res.status}`)
+          }
 
           const data = await res.json() as { transcript: string }
           setState('done')
@@ -119,6 +111,8 @@ export function useSpeech(language: string) {
   }, [language])
 
   const reset = useCallback(() => {
+    wsRef.current?.stop()
+    wsRef.current = null
     setState('idle')
     setLive('')
     setError(null)

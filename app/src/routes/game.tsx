@@ -126,7 +126,8 @@ function GamePage() {
     startRecording()
     startTimeRef.current = Date.now()
     timer.start()
-    await speech.start()
+    const ok = await speech.start()
+    if (!ok) { timer.reset(); retry() }
   }
 
   const handleStop = async () => {
