@@ -1,5 +1,6 @@
+import { useRef } from 'react'
 import { motion } from 'motion/react'
-import { Mic, MicOff, Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { Mic, MicOff, Loader2, CheckCircle2 } from 'lucide-react'
 import type { SpeechState } from '@/hooks/useSpeech'
 
 interface Props {
@@ -12,10 +13,13 @@ interface Props {
 }
 
 export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: Props) {
-  const isRecording  = state === 'recording'
+  // Ref-based tracking so onPointerUp doesn't depend on stale React state
+  const activeRef = useRef(false)
+
   const isProcessing = state === 'processing'
   const isSuccess    = state === 'done'
   const isError      = state === 'error'
+  const isRecording  = state === 'recording'
 
   const errorLabel =
     error === 'mic_denied'             ? 'Accès micro refusé — autorise le micro dans le navigateur' :
@@ -26,11 +30,24 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
                                          'Erreur — appuie pour réessayer'
 
   const label =
-    isRecording  ? 'Appuie pour arrêter' :
+    isRecording  ? 'Maintiens et relâche pour valider' :
     isProcessing ? 'Analyse en cours…' :
     isSuccess    ? 'Bien joué !' :
     isError      ? errorLabel :
-                   'Appuie pour parler'
+                   'Maintiens pour parler'
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (disabled || isProcessing || isError) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    activeRef.current = true
+    onStart()
+  }
+
+  const handlePointerUp = () => {
+    if (!activeRef.current) return
+    activeRef.current = false
+    onStop()
+  }
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -50,19 +67,10 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
             ? '0 0 0 0 rgba(239,68,68,0.5)'
             : `0 8px 32px rgb(var(--p) / 0.4)`,
         }}
-        onPointerDown={(e) => {
-          if (disabled || isProcessing) return
-          if (state === 'idle') {
-            e.currentTarget.setPointerCapture(e.pointerId)
-            onStart()
-          }
-        }}
-        onPointerUp={() => {
-          if (isRecording) onStop()
-        }}
-        onClick={() => {
-          if (isError && onRetry) onRetry()
-        }}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onClick={() => { if (isError && onRetry) onRetry() }}
         animate={
           isRecording  ? { scale: [1, 1.06, 1] } :
           isProcessing ? { rotate: 360 }          :
@@ -77,7 +85,6 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
         aria-label={label}
         aria-pressed={isRecording}
       >
-        {/* Ripple ring */}
         {isRecording && (
           <span
             className="absolute inset-0 rounded-full animate-ping"
@@ -85,9 +92,9 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
           />
         )}
 
-        {isProcessing ? <Loader2 size={36} />       :
-         isSuccess    ? <CheckCircle2 size={36} />  :
-         isError      ? <MicOff size={36} />        :
+        {isProcessing ? <Loader2 size={36} />      :
+         isSuccess    ? <CheckCircle2 size={36} /> :
+         isError      ? <MicOff size={36} />       :
                         <Mic size={36} />}
       </motion.button>
 

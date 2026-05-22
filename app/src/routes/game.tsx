@@ -139,7 +139,7 @@ function GamePage() {
   handleStartRef.current = handleStart
 
   const handleStop = async () => {
-    if (phase !== 'recording') return
+    if (useGameStore.getState().phase !== 'recording') return
     timer.pause()
     stopRecording()
     elapsedMsRef.current = Date.now() - startTimeRef.current
