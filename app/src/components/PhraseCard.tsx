@@ -161,7 +161,7 @@ export function PhraseCard({ text, liveTranscript, wordScores, isRecording }: Pr
               const ws = scoreToState(score)
               const s  = STATE_STYLE[ws]
               return (
-                <span
+                <motion.span
                   key={i}
                   className="text-xs font-bold px-2 py-0.5 rounded-full"
                   style={{
@@ -169,9 +169,12 @@ export function PhraseCard({ text, liveTranscript, wordScores, isRecording }: Pr
                     background: `${s.color}20`,
                     border:     `1px solid ${s.color}40`,
                   }}
+                  initial={{ opacity: 0, scale: 0.75 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: 'spring', duration: 0.3, bounce: 0.2, delay: i * 0.04 }}
                 >
                   {ws === 'correct' ? '✓' : ws === 'approximate' ? '~' : '✗'} {phraseWords[i]}
-                </span>
+                </motion.span>
               )
             })}
           </motion.div>

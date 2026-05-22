@@ -1,6 +1,13 @@
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { Mic, MicOff, Loader2, CheckCircle2 } from 'lucide-react'
 import type { SpeechState } from '@/hooks/useSpeech'
+
+const iconVariants = {
+  initial: { opacity: 0, scale: 0.7, filter: 'blur(4px)' },
+  animate: { opacity: 1, scale: 1, filter: 'blur(0px)' },
+  exit:    { opacity: 0, scale: 0.7, filter: 'blur(4px)' },
+}
+const iconTransition = { type: 'spring' as const, duration: 0.18, bounce: 0 }
 
 interface Props {
   state:     SpeechState
@@ -55,18 +62,12 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
           boxShadow: isRecording
             ? '0 0 0 0 rgba(239,68,68,0.5)'
             : `0 8px 32px rgb(var(--p) / 0.4)`,
+          transition: 'background-color 180ms ease, box-shadow 180ms ease',
         }}
         onClick={handleClick}
-        animate={
-          isRecording  ? { scale: [1, 1.06, 1] } :
-          isProcessing ? { rotate: 360 }          :
-                         { scale: 1 }
-        }
-        transition={
-          isRecording  ? { repeat: Infinity, duration: 0.9, ease: 'easeInOut' } :
-          isProcessing ? { repeat: Infinity, duration: 1, ease: 'linear' }      :
-                         {}
-        }
+        animate={isRecording ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+        transition={isRecording ? { repeat: Infinity, duration: 0.9, ease: 'easeInOut' } : { duration: 0.15 }}
+        whileTap={!isProcessing ? { scale: 0.93 } : {}}
         disabled={disabled || isProcessing}
         aria-label={label}
         aria-pressed={isRecording}
@@ -78,10 +79,25 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
           />
         )}
 
-        {isProcessing ? <Loader2 size={36} />      :
-         isSuccess    ? <CheckCircle2 size={36} /> :
-         isError      ? <MicOff size={36} />       :
-                        <Mic size={36} />}
+        <AnimatePresence mode="wait" initial={false}>
+          {isProcessing ? (
+            <motion.span key="processing" {...iconVariants} transition={iconTransition}>
+              <Loader2 size={36} className="animate-spin" />
+            </motion.span>
+          ) : isSuccess ? (
+            <motion.span key="success" {...iconVariants} transition={iconTransition}>
+              <CheckCircle2 size={36} />
+            </motion.span>
+          ) : isError ? (
+            <motion.span key="error" {...iconVariants} transition={iconTransition}>
+              <MicOff size={36} />
+            </motion.span>
+          ) : (
+            <motion.span key="idle" {...iconVariants} transition={iconTransition}>
+              <Mic size={36} />
+            </motion.span>
+          )}
+        </AnimatePresence>
       </motion.button>
 
       <p className="text-sm text-slate-400 font-medium text-center min-h-[1.25rem]">
