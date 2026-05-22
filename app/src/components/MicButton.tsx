@@ -6,20 +6,28 @@ interface Props {
   state:     SpeechState
   onStart:   () => void
   onStop:    () => void
+  onRetry?:  () => void
   disabled?: boolean
+  error?:    string | null
 }
 
-export function MicButton({ state, onStart, onStop, disabled }: Props) {
+export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: Props) {
   const isRecording  = state === 'recording'
   const isProcessing = state === 'processing'
   const isSuccess    = state === 'done'
   const isError      = state === 'error'
 
+  const errorLabel =
+    error === 'mic_denied'             ? 'Accès micro refusé — autorise le micro dans le navigateur' :
+    error === 'mic_not_supported'      ? 'Micro non supporté par ce navigateur' :
+    error === 'recorder_not_supported' ? 'Enregistrement audio non supporté' :
+                                         'Erreur micro — réessaie'
+
   const label =
     isRecording  ? 'Relâche pour valider' :
     isProcessing ? 'Analyse en cours…' :
     isSuccess    ? 'Bien joué !' :
-    isError      ? 'Erreur micro' :
+    isError      ? errorLabel :
                    'Appuie pour parler'
 
   return (
@@ -39,7 +47,7 @@ export function MicButton({ state, onStart, onStop, disabled }: Props) {
             ? '0 0 0 0 rgba(239,68,68,0.5)'
             : `0 8px 32px rgb(var(--p) / 0.4)`,
         }}
-        onPointerDown={state === 'idle' ? onStart : undefined}
+        onPointerDown={state === 'idle' ? onStart : isError ? onRetry : undefined}
         onPointerUp={isRecording ? onStop : undefined}
         onPointerLeave={isRecording ? onStop : undefined}
         animate={

@@ -237,14 +237,16 @@ function GamePage() {
         )}
       </AnimatePresence>
 
-      {/* Mic button (recording states) */}
-      {(phase === 'phrase_display' || isPlaying) && (
+      {/* Mic button (recording states + error) */}
+      {(phase === 'phrase_display' || isPlaying || speech.state === 'error') && (
         <div className="mt-2">
           <MicButton
             state={speech.state}
             onStart={handleStart}
             onStop={handleStop}
+            onRetry={() => { speech.reset(); }}
             disabled={phase === 'processing'}
+            error={speech.error}
           />
         </div>
       )}
