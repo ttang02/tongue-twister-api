@@ -21,7 +21,9 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
     error === 'mic_denied'             ? 'Accès micro refusé — autorise le micro dans le navigateur' :
     error === 'mic_not_supported'      ? 'Micro non supporté par ce navigateur' :
     error === 'recorder_not_supported' ? 'Enregistrement audio non supporté' :
-                                         'Erreur micro — réessaie'
+    error?.includes('short') || error?.includes('silent') ? 'Audio trop court — parle plus longtemps' :
+    error?.includes('configured')      ? 'Service vocal non configuré' :
+                                         'Erreur — appuie pour réessayer'
 
   const label =
     isRecording  ? 'Appuie pour arrêter' :

@@ -118,6 +118,7 @@ function GamePage() {
   const startTimeRef   = useRef(0)
   const autoStopRef    = useRef(false)
   const autoRetryCount = useRef(0)
+  const apiErrorRef    = useRef(false)   // true when error came from transcription, not from mic
   // Always points to the latest handleStart — safe to call from setTimeout
   const handleStartRef = useRef<() => Promise<void>>(() => Promise.resolve())
   const [shaking, setShaking] = useState(false)
@@ -147,6 +148,7 @@ function GamePage() {
       const { accuracy: acc, wordScores: ws } = computeAccuracy(spoken, phrase?.text ?? '')
       setResult(spoken, acc, ws, elapsedMsRef.current)
     } catch {
+      apiErrorRef.current = true   // tell auto-retry to skip — error is from transcription
       timer.reset()
       retry()
     }
@@ -175,10 +177,11 @@ function GamePage() {
     }
   }, [speech.liveTranscript, phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-retry transient errors (API failure, short audio, etc.) and auto-restart mic
+  // Auto-retry mic errors only (not transcription failures — those reset via onRetry button)
   useEffect(() => {
     if (speech.state !== 'error') { autoRetryCount.current = 0; return }
     if (PERM_ERRORS.includes(speech.error ?? '')) return
+    if (apiErrorRef.current) { apiErrorRef.current = false; return }  // was API/transcription error
     if (autoRetryCount.current >= 3) return
     autoRetryCount.current++
     const id = setTimeout(() => {
@@ -267,7 +270,12 @@ function GamePage() {
             state={speech.state}
             onStart={handleStart}
             onStop={handleStop}
-            onRetry={() => { autoRetryCount.current = 0; speech.reset(); retry(); }}
+            onRetry={() => {
+              autoRetryCount.current = 0
+              speech.reset()
+              retry()
+              setTimeout(() => handleStartRef.current(), 60)
+            }}
             disabled={phase === 'processing'}
             error={speech.error}
           />
