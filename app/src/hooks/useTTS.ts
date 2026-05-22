@@ -58,6 +58,7 @@ function pickVoice(lang: string): SpeechSynthesisVoice | null {
 
 export function useTTS(language: Language | null) {
   const voicesReady = useRef(false)
+  const audioRef    = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     if (typeof speechSynthesis === 'undefined') return
@@ -68,39 +69,38 @@ export function useTTS(language: Language | null) {
   }, [])
 
   const speak = useCallback((text: string) => {
+    const lang = language ?? 'fr'
+
+    // Vietnamese: Google Translate TTS (best tonal quality available)
+    if (lang === 'vi') {
+      if (audioRef.current) { audioRef.current.pause() }
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`
+      const audio = new Audio(url)
+      audioRef.current = audio
+      audio.play().catch(() => {})  // fail silently
+      return
+    }
+
+    // Other languages: Web Speech API
     if (typeof speechSynthesis === 'undefined') return
     speechSynthesis.cancel()
 
-    const lang      = language ?? 'fr'
     const bcp47     = LANG_BCP47[lang]
+    const voice     = pickVoice(bcp47)
     const ttsConfig = LANG_TTS[lang]
-
-    const utt   = new SpeechSynthesisUtterance(text)
-    utt.lang    = bcp47
-    utt.volume  = 1
-
-    if (lang === 'vi') {
-      // Vietnamese: prefer Google/Microsoft voices (best tonal quality)
-      const voices = speechSynthesis.getVoices()
-      const viVoice = voices.find(v =>
-        v.lang === 'vi-VN' &&
-        (v.name.includes('Google') || v.name.includes('Microsoft'))
-      )
-      if (viVoice) utt.voice = viVoice
-      utt.rate  = 0.9
-      utt.pitch = 1.0
-    } else {
-      const voice = pickVoice(bcp47)
-      if (voice) utt.voice = voice
-      utt.rate  = ttsConfig.rate
-      utt.pitch = ttsConfig.pitch
-    }
+    const utt       = new SpeechSynthesisUtterance(text)
+    utt.lang        = bcp47
+    utt.rate        = ttsConfig.rate
+    utt.pitch       = ttsConfig.pitch
+    utt.volume      = 1
+    if (voice) utt.voice = voice
 
     speechSynthesis.speak(utt)
   }, [language])
 
   const cancel = useCallback(() => {
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel()
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
   }, [])
 
   return { speak, cancel }
