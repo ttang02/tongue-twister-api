@@ -80,6 +80,8 @@ export function useTTS(language: Language | null) {
     speechSynthesis.cancel()  // stop anything in progress
 
     const lang   = language ?? 'fr'
+    // Vietnamese Web Speech API quality too poor — skip
+    if (lang === 'vi') return
     const bcp47  = LANG_BCP47[lang]
     const voice  = pickVoice(bcp47)
 
