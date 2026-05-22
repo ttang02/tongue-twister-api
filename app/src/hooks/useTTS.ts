@@ -26,16 +26,19 @@ const LANG_TTS: Record<Language, { rate: number; pitch: number }> = {
   vi: { rate: 0.9,  pitch: 1.0 },
 }
 
-// Load ResponsiveVoice script once
+// Load ResponsiveVoice script once — eagerly on first import
 let rvLoaded = false
 function loadResponsiveVoice() {
-  if (rvLoaded || document.querySelector('script[src*="responsivevoice"]')) { rvLoaded = true; return }
+  if (rvLoaded || typeof document === 'undefined') return
+  if (document.querySelector('script[src*="responsivevoice"]')) { rvLoaded = true; return }
   rvLoaded = true
   const s = document.createElement('script')
   s.src = 'https://code.responsivevoice.org/responsivevoice.js'
   s.async = true
   document.head.appendChild(s)
 }
+// Load immediately so it's ready by the time user finishes a phrase
+loadResponsiveVoice()
 
 function pickVoice(lang: string): SpeechSynthesisVoice | null {
   const voices = speechSynthesis.getVoices()
@@ -69,11 +72,7 @@ function pickVoice(lang: string): SpeechSynthesisVoice | null {
 
 export function useTTS(language: Language | null) {
   const voicesReady = useRef(false)
-
-  useEffect(() => {
-    // Preload ResponsiveVoice if Vietnamese selected
-    if (language === 'vi') loadResponsiveVoice()
-  }, [language])
+  const audioRef    = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     if (typeof speechSynthesis === 'undefined') return
@@ -86,11 +85,18 @@ export function useTTS(language: Language | null) {
   const speak = useCallback((text: string) => {
     const lang = language ?? 'fr'
 
-    // Vietnamese: ResponsiveVoice ("Vietnamese Female")
+    // Vietnamese: ResponsiveVoice, fallback Google Translate audio
     if (lang === 'vi') {
       if (window.responsiveVoice) {
         window.responsiveVoice.cancel()
         window.responsiveVoice.speak(text, 'Vietnamese Female', { rate: 0.9 })
+      } else {
+        // Fallback if script not loaded yet
+        if (audioRef.current) { audioRef.current.pause() }
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`
+        const audio = new Audio(url)
+        audioRef.current = audio
+        audio.play().catch(() => {})
       }
       return
     }
@@ -115,6 +121,7 @@ export function useTTS(language: Language | null) {
   const cancel = useCallback(() => {
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel()
     if (window.responsiveVoice) window.responsiveVoice.cancel()
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
   }, [])
 
   return { speak, cancel }
