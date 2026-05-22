@@ -1,6 +1,11 @@
-// Text-to-speech: Google Translate audio for vi, Web Speech API for fr/en/ko
+// Text-to-speech: Edge TTS (server) for vi, Web Speech API for fr/en/ko
 import { useCallback, useEffect, useRef } from 'react'
 import type { Language } from '@/store/gameStore'
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+
+// Languages routed to server-side Edge TTS
+const SERVER_TTS_LANGS = new Set<Language>(['vi'])
 
 const LANG_BCP47: Record<Language, string> = {
   fr: 'fr-FR',
@@ -58,16 +63,25 @@ export function useTTS(language: Language | null) {
     return () => speechSynthesis.removeEventListener('voiceschanged', load)
   }, [])
 
-  const speak = useCallback((text: string) => {
+  const speak = useCallback(async (text: string) => {
     const lang = language ?? 'fr'
 
-    // Vietnamese: Google Translate TTS audio
-    if (lang === 'vi') {
-      if (audioRef.current) { audioRef.current.pause() }
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`
-      const audio = new Audio(url)
-      audioRef.current = audio
-      audio.play().catch(() => {})
+    // Vietnamese: server-side Edge TTS (vi-VN-HoaiMyNeural)
+    if (SERVER_TTS_LANGS.has(lang)) {
+      try {
+        if (audioRef.current) { audioRef.current.pause() }
+        const params = new URLSearchParams({ text, lang })
+        const res = await fetch(`${API_URL}/speech/tts?${params}`)
+        if (!res.ok) return
+        const blob = await res.blob()
+        const url  = URL.createObjectURL(blob)
+        const audio = new Audio(url)
+        audioRef.current = audio
+        audio.onended = () => URL.revokeObjectURL(url)
+        audio.play().catch(() => {})
+      } catch {
+        // TTS non-critical — fail silently
+      }
       return
     }
 
