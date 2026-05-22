@@ -7,13 +7,19 @@ Un jeu de virelangues multilingue où le joueur prononce des phrases dans son mi
 ## Fonctionnalités
 
 - **Micro intégré** — MediaRecorder API → Groq Whisper (< 300 ms), Web Speech API en fallback live
-- **Timer de jeu** — compte à rebours par difficulté (30 s / 20 s / 10 s), barre animée avec glow
+- **Timer de jeu** — compte à rebours par difficulté (30 s / 20 s / 10 s), barre animée scaleX avec glow
 - **Validation stricte** — seuil de précision par langue, pas de score si raté
-- **Score** — précision × 1000 + bonus temps, count-up animé, leaderboard avec médailles 🥇🥈🥉
+- **Score** — précision × multiplicateur difficulté (×1.0 / ×1.5 / ×2.5) + bonus temps, count-up animé
+- **Leaderboard** — classement avec médailles 🥇🥈🥉, filtrable par difficulté, détection doublons
+- **TTS automatique** — prononciation de la phrase après chaque tentative : Web Speech API (fr/en/ko) + Google Translate TTS via proxy serveur (vi)
+- **Colorisation mot-à-mot** — feedback en temps réel pendant l'enregistrement (vert ✓ / orange ~ / rouge ✗) via Jaro-Winkler
+- **Progression de difficulté** — suggestion automatique de monter en difficulté après une série de succès (streak)
 - **Thème par langue** — fond et accents changent : bleu 🇫🇷 / rouge 🇺🇸 / jaune 🇰🇷 / vert 🇻🇳
 - **84 virelangues** — 3 difficultés × 4 langues, base extensible
 - **PWA** — installable sur iOS, Android, desktop, fonctionne sur tous les navigateurs
 - **Onboarding** — tutoriel 3 slides au premier lancement, ré-ouvrable via `?` dans le header
+- **Rate limiting** — 30 POST/min par IP côté serveur
+- **Error boundary** — capture d'erreurs React avec fallback gracieux
 
 ---
 
@@ -32,7 +38,8 @@ Un jeu de virelangues multilingue où le joueur prononce des phrases dans son mi
 | Validation | TypeBox natif Elysia |
 | ORM | Drizzle ORM |
 | Base de données | SQLite (`better-sqlite3`) en dev · Turso LibSQL en prod |
-| Speech | MediaRecorder + **Groq Whisper** `whisper-large-v3-turbo` |
+| Speech-to-Text | MediaRecorder + **Groq Whisper** `whisper-large-v3-turbo` |
+| Text-to-Speech | Web Speech API (fr/en/ko) · Google Translate TTS proxy (vi) |
 | TypeScript runtime | `tsx` (dev) |
 
 ---
@@ -142,8 +149,9 @@ tongue-twister-api/
 │   │   │   └── seed.ts       84 phrases (fr/en/ko/vi × easy/medium/hard)
 │   │   ├── routes/
 │   │   │   ├── phrases.ts    GET /phrases, GET /phrases/:id, POST /phrases
-│   │   │   ├── scores.ts     GET /scores, POST /scores, GET /scores/top
+│   │   │   ├── scores.ts     GET /scores, POST /scores, GET /scores/top, GET /scores/players
 │   │   │   └── speech.ts     POST /speech/transcribe → Groq Whisper
+│   │   │                     GET /speech/tts → Google Translate TTS proxy (vi)
 │   │   └── index.ts          entrée Elysia + CORS + Scalar docs
 │   ├── drizzle.config.ts
 │   └── tsconfig.json
@@ -151,19 +159,20 @@ tongue-twister-api/
 └── app/                  ← frontend React 19
     ├── src/
     │   ├── components/
-    │   │   ├── PhraseCard.tsx       glassmorphism + quote marks colorés
-    │   │   ├── MicButton.tsx        96px, ripple, états visuels complets
-    │   │   ├── GameTimer.tsx        barre glow dual-layer, haptic 5s
-    │   │   ├── TranscriptDiff.tsx   chips ✓/~/✗ par mot
+    │   │   ├── PhraseCard.tsx       glassmorphism + coloration mot-à-mot live
+    │   │   ├── MicButton.tsx        96px, blur crossfade icons, press feedback
+    │   │   ├── GameTimer.tsx        barre scaleX glow dual-layer, haptic 5s
     │   │   ├── ScoreBoard.tsx       🥇🥈🥉 + barre de score + skeleton
-    │   │   ├── Confetti.tsx         canvas particles au succès
+    │   │   ├── Confetti.tsx         canvas particles + prefers-reduced-motion
+    │   │   ├── ErrorBoundary.tsx    React error boundary avec fallback
     │   │   ├── Onboarding.tsx       3 slides glassmorphism
     │   │   ├── LanguagePicker.tsx   cartes colorées par langue
     │   │   └── DifficultyPicker.tsx slide-in avec icônes colorées
     │   ├── hooks/
     │   │   ├── useSpeech.ts         MediaRecorder + Whisper + Web Speech API
     │   │   ├── useGameTimer.ts      rAF countdown pause/resume
-    │   │   ├── useAccuracy.ts       Jaro-Winkler word-by-word
+    │   │   ├── useAccuracy.ts       Jaro-Winkler DP alignment + expandCompounds
+    │   │   ├── useTTS.ts            TTS: Web Speech API (fr/en/ko) + server proxy (vi)
     │   │   ├── useCountUp.ts        animation count-up du score
     │   │   └── useOnboarding.ts     localStorage first-launch
     │   ├── constants/
