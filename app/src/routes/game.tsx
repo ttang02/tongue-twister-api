@@ -7,7 +7,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { PhraseCard } from '@/components/PhraseCard'
 import { MicButton } from '@/components/MicButton'
 import { GameTimer } from '@/components/GameTimer'
-import { TranscriptDiff } from '@/components/TranscriptDiff'
 import { Confetti } from '@/components/Confetti'
 import { useGameStore, TIMER_MS } from '@/store/gameStore'
 import { LANG_THEME } from '@/constants/themes'
@@ -185,26 +184,19 @@ function GamePage() {
       {/* Timer */}
       <GameTimer percent={timer.percent} remaining={timer.remaining} />
 
-      {/* Phrase card — shake on failure */}
+      {/* Phrase card — live word highlighting + shake on failure */}
       <motion.div
         className={`w-full ${shaking ? 'shake' : ''}`}
         animate={shaking ? { x: [-8, 8, -6, 6, 0] } : { x: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <PhraseCard text={phrase.text} />
+        <PhraseCard
+          text={phrase.text}
+          liveTranscript={speech.liveTranscript}
+          wordScores={wordScores.length > 0 ? wordScores : undefined}
+          isRecording={phase === 'recording'}
+        />
       </motion.div>
-
-      {/* Live transcript */}
-      <AnimatePresence>
-        {speech.liveTranscript && phase === 'recording' && (
-          <motion.p
-            className="text-slate-400 text-sm italic text-center px-2"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          >
-            « {speech.liveTranscript} »
-          </motion.p>
-        )}
-      </AnimatePresence>
 
       {/* Result feedback */}
       <AnimatePresence mode="wait">
@@ -220,19 +212,9 @@ function GamePage() {
             animate={{ opacity: 1, y: 0 }}
             aria-live="assertive"
           >
-            <p className="text-4xl">
-              {phase === 'timeout' ? '⏰' : '😬'}
-            </p>
             <p className="text-xl font-bold text-red-400">
               {phase === 'timeout' ? t('game.time_up') : t('game.try_again')}
             </p>
-            {phase === 'failure' && wordScores.length > 0 && (
-              <TranscriptDiff
-                targetWords={phrase.text.split(/\s+/)}
-                spokenWords={transcript.split(/\s+/)}
-                wordScores={wordScores}
-              />
-            )}
           </motion.div>
         )}
       </AnimatePresence>
