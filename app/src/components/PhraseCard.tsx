@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react'
-import { jaroWinkler, normalizeWord } from '@/hooks/useAccuracy'
+import { jaroWinkler, normalizeWord, WORD_CORRECT, WORD_APPROX } from '@/hooks/useAccuracy'
 
 interface Props {
   text:           string
@@ -15,8 +15,8 @@ function getLiveWordStates(phraseWords: string[], liveWords: string[]): WordStat
     if (i > liveWords.length) return 'idle'
     if (i === liveWords.length) return 'active'
     const score = jaroWinkler(normalizeWord(liveWords[i] ?? ''), normalizeWord(pw))
-    if (score >= 0.82) return 'correct'
-    if (score >= 0.60) return 'approximate'
+    if (score >= WORD_CORRECT) return 'correct'
+    if (score >= WORD_APPROX) return 'approximate'
     return 'missed'
   })
 }
@@ -30,13 +30,18 @@ const STATE_STYLE: Record<WordState, { color: string; shadow?: string; opacity: 
 }
 
 function scoreToState(score: number): WordState {
-  if (score >= 0.9) return 'correct'
-  if (score >= 0.7) return 'approximate'
+  if (score >= WORD_CORRECT) return 'correct'
+  if (score >= WORD_APPROX) return 'approximate'
   return 'missed'
 }
 
+// Strip tokens that are purely punctuation (e.g. standalone "?", ",")
+function cleanPhraseWords(text: string): string[] {
+  return text.split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w))
+}
+
 export function PhraseCard({ text, liveTranscript, wordScores, isRecording }: Props) {
-  const phraseWords = text.split(/\s+/)
+  const phraseWords = cleanPhraseWords(text)
   const liveWords   = liveTranscript ? liveTranscript.trim().split(/\s+/).filter(Boolean) : []
   const hasLive     = isRecording && liveWords.length > 0
   const hasFinal    = !!wordScores && wordScores.length > 0

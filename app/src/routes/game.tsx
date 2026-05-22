@@ -8,19 +8,18 @@ import { PhraseCard } from '@/components/PhraseCard'
 import { MicButton } from '@/components/MicButton'
 import { GameTimer } from '@/components/GameTimer'
 import { Confetti } from '@/components/Confetti'
-import { useGameStore, TIMER_MS } from '@/store/gameStore'
+import { useGameStore, TIMER_MS, ACCURACY_THRESHOLD } from '@/store/gameStore'
 import { LANG_THEME } from '@/constants/themes'
 import type { Phrase } from '@/store/gameStore'
 import { useSpeech } from '@/hooks/useSpeech'
 import { useGameTimer } from '@/hooks/useGameTimer'
-import { computeAccuracy } from '@/hooks/useAccuracy'
+import { computeAccuracy, normalizeWord } from '@/hooks/useAccuracy'
 import { useCountUp } from '@/hooks/useCountUp'
 
 export const Route = createFileRoute('/game')({ component: GamePage })
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const PERM_ERRORS = ['mic_denied', 'mic_not_supported', 'recorder_not_supported']
-const AUTO_ADVANCE_S = 3
 
 function SuccessPanel({
   score, accuracy, sessionScore, sessionCount, t,
@@ -139,10 +138,17 @@ function GamePage() {
   const autoRetryCount = useRef(0)
   const apiErrorRef    = useRef(false)
   const handleStartRef = useRef<() => Promise<void>>(() => Promise.resolve())
-  const [shaking, setShaking]     = useState(false)
-  const [countdown, setCountdown] = useState<number | null>(null)
+  const handleStopRef  = useRef<() => Promise<void>>(() => Promise.resolve())
+  const [shaking, setShaking] = useState(false)
 
-  const handleTimeout = () => timeout()
+  // On timeout: still process audio — user may have said it in time
+  const handleTimeout = () => {
+    if (useGameStore.getState().phase === 'recording') {
+      handleStopRef.current()
+    } else {
+      timeout()
+    }
+  }
   const timerDuration = difficulty ? TIMER_MS[difficulty] : 20_000
   const timer  = useGameTimer(timerDuration, handleTimeout)
   const speech = useSpeech(language ?? 'en')
@@ -162,19 +168,29 @@ function GamePage() {
     timer.pause()
     stopRecording()
     elapsedMsRef.current = Date.now() - startTimeRef.current
+    const liveText = speech.liveTranscript.trim()
     try {
       const spoken = await speech.stop()
-      const { accuracy: acc, wordScores: ws } = computeAccuracy(spoken, phrase?.text ?? '')
-      setResult(spoken, acc, ws, elapsedMsRef.current)
+      // Prefer Whisper transcript; fall back to live transcript if Whisper returns empty
+      const text = spoken.trim() || liveText
+      const { accuracy: acc, wordScores: ws } = computeAccuracy(text, phrase?.text ?? '')
+      setResult(text, acc, ws, elapsedMsRef.current)
     } catch {
+      // Block auto-retry regardless of how we handle the error
       apiErrorRef.current = true
-      timer.reset()
-      retry()
+      // Whisper API failed — use live transcript (Web Speech API) if available
+      if (liveText) {
+        const { accuracy: acc, wordScores: ws } = computeAccuracy(liveText, phrase?.text ?? '')
+        setResult(liveText, acc, ws, elapsedMsRef.current)
+      } else {
+        timer.reset()
+        retry()
+      }
     }
   }
+  handleStopRef.current = handleStop
 
   const handleNextPhrase = () => {
-    setCountdown(null)
     autoStopRef.current = false
     autoRetryCount.current = 0
     if (phrases && phrases.length > 0) {
@@ -189,22 +205,6 @@ function GamePage() {
     timer.reset(); speech.reset(); retry()
   }
 
-  // Auto-advance countdown after success
-  useEffect(() => {
-    if (phase !== 'success') { setCountdown(null); return }
-    setCountdown(AUTO_ADVANCE_S)
-  }, [phase])
-
-  useEffect(() => {
-    if (countdown === null || countdown <= 0) return
-    const id = setTimeout(() => setCountdown(c => (c ?? 1) - 1), 1000)
-    return () => clearTimeout(id)
-  }, [countdown])
-
-  useEffect(() => {
-    if (countdown === 0) handleNextPhrase()
-  }, [countdown]) // eslint-disable-line react-hooks/exhaustive-deps
-
   // Shake on failure/timeout
   useEffect(() => {
     if (phase === 'failure' || phase === 'timeout') {
@@ -218,11 +218,12 @@ function GamePage() {
   useEffect(() => {
     if (phase !== 'recording' || !speech.liveTranscript || !phrase) return
     if (autoStopRef.current) return
-    const spoken = speech.liveTranscript.trim().split(/\s+/).filter(Boolean)
-    const target = phrase.text.trim().split(/\s+/).filter(Boolean)
+    const spoken = speech.liveTranscript.trim().split(/\s+/).map(normalizeWord).filter(Boolean)
+    const target = phrase.text.trim().split(/\s+/).map(normalizeWord).filter(Boolean)
     if (spoken.length < target.length) return
     const { accuracy: acc } = computeAccuracy(speech.liveTranscript, phrase.text)
-    if (acc >= 0.62) { autoStopRef.current = true; handleStop() }
+    const autoStopThreshold = (ACCURACY_THRESHOLD[language ?? 'en'] ?? 0.72) * 0.9
+    if (acc >= autoStopThreshold) { autoStopRef.current = true; handleStop() }
   }, [speech.liveTranscript, phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-retry mic errors only
@@ -304,8 +305,8 @@ function GamePage() {
         )}
       </AnimatePresence>
 
-      {/* Mic button */}
-      {(phase === 'phrase_display' || isPlaying || speech.state === 'error') && (
+      {/* Mic button — hide once result is known */}
+      {!isSuccess && !isFailed && (phase === 'phrase_display' || isPlaying || speech.state === 'error') && (
         <div className="mt-1">
           <MicButton
             state={speech.state}
@@ -335,17 +336,9 @@ function GamePage() {
             className="btn-primary w-full text-base flex items-center justify-center gap-2"
           >
             {t('game.next_phrase')}
-            {countdown !== null && countdown > 0 && (
-              <span
-                className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-black"
-                style={{ background: 'rgba(255,255,255,0.25)' }}
-              >
-                {countdown}
-              </span>
-            )}
           </button>
 
-          {/* Save score (stops auto-advance) */}
+          {/* Save score */}
           <div className="flex items-center gap-2 w-full">
             <input
               type="text"
@@ -353,7 +346,6 @@ function GamePage() {
               maxLength={30}
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
-              onFocus={() => setCountdown(null)}
               className="flex-1 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-slate-500
                          focus:outline-none focus:ring-2"
               style={{
@@ -363,7 +355,7 @@ function GamePage() {
               } as React.CSSProperties}
             />
             <button
-              onClick={() => { setCountdown(null); submitScore.mutate(playerName || 'Anonyme') }}
+              onClick={() => submitScore.mutate(playerName || 'Anonyme')}
               disabled={submitScore.isPending}
               className="shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-colors"
               style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)' }}

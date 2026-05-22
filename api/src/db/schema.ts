@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, real, primaryKey } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 
 export const phrases = sqliteTable('phrases', {
@@ -21,7 +21,20 @@ export const scores = sqliteTable('scores', {
   created_at:  text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 
-export type Phrase    = typeof phrases.$inferSelect
-export type NewPhrase = typeof phrases.$inferInsert
-export type Score     = typeof scores.$inferSelect
-export type NewScore  = typeof scores.$inferInsert
+export const playerStats = sqliteTable('player_stats', {
+  player_name:  text('player_name').notNull(),
+  language:     text('language', { enum: ['fr', 'en', 'ko', 'vi'] }).notNull(),
+  total_score:  integer('total_score').notNull().default(0),
+  count_easy:   integer('count_easy').notNull().default(0),
+  count_medium: integer('count_medium').notNull().default(0),
+  count_hard:   integer('count_hard').notNull().default(0),
+  updated_at:   text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.player_name, t.language] }),
+}))
+
+export type Phrase      = typeof phrases.$inferSelect
+export type NewPhrase   = typeof phrases.$inferInsert
+export type Score       = typeof scores.$inferSelect
+export type NewScore    = typeof scores.$inferInsert
+export type PlayerStats = typeof playerStats.$inferSelect

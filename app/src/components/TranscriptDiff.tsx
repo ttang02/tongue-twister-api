@@ -1,3 +1,5 @@
+import { WORD_CORRECT, WORD_APPROX } from '@/hooks/useAccuracy'
+
 interface Props {
   targetWords: string[]
   spokenWords: string[]
@@ -12,9 +14,9 @@ interface WordMeta {
 }
 
 function wordMeta(score: number): WordMeta {
-  if (score >= 0.9) return { color: '#4ade80', bg: 'rgba(74,222,128,0.12)', icon: '✓', label: 'Correct' }
-  if (score >= 0.7) return { color: '#fb923c', bg: 'rgba(251,146,60,0.12)', icon: '~', label: 'Approximatif' }
-  return               { color: '#f87171', bg: 'rgba(248,113,113,0.12)', icon: '✗', label: 'Incorrect' }
+  if (score >= WORD_CORRECT) return { color: '#4ade80', bg: 'rgba(74,222,128,0.12)', icon: '✓', label: 'Correct' }
+  if (score >= WORD_APPROX)  return { color: '#fb923c', bg: 'rgba(251,146,60,0.12)', icon: '~', label: 'Approximatif' }
+  return                            { color: '#f87171', bg: 'rgba(248,113,113,0.12)', icon: '✗', label: 'Incorrect' }
 }
 
 export function TranscriptDiff({ targetWords, spokenWords, wordScores }: Props) {

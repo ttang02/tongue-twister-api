@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia'
 import { eq, and, desc, sql } from 'drizzle-orm'
 import { db } from '../db/client'
-import { scores, phrases } from '../db/schema'
+import { scores, phrases, playerStats } from '../db/schema'
 
 const langEnum = t.Union([t.Literal('fr'), t.Literal('en'), t.Literal('ko'), t.Literal('vi')])
 const diffEnum = t.Union([t.Literal('easy'), t.Literal('medium'), t.Literal('hard')])
@@ -48,15 +48,35 @@ export const scoresRoute = new Elysia({ prefix: '/scores' })
     }),
   })
 
+  // Aggregated player leaderboard
+  .get('/players', async ({ query }) => {
+    const { lang, limit } = query
+
+    const rows = await db
+      .select()
+      .from(playerStats)
+      .where(lang ? eq(playerStats.language, lang) : undefined)
+      .orderBy(desc(playerStats.total_score))
+      .limit(limit ?? 50)
+
+    return { data: rows, total: rows.length }
+  }, {
+    query: t.Object({
+      lang:  t.Optional(langEnum),
+      limit: t.Optional(t.Numeric({ minimum: 1, maximum: 200, default: 50 })),
+    }),
+  })
+
   .post('/', async ({ body, set, error }) => {
     const phrase = await db.select().from(phrases).where(eq(phrases.id, body.phrase_id)).get()
     if (!phrase) return error(404, { error: 'Phrase not found' })
 
     // Recalculate score server-side to prevent cheating
-    const remaining_s  = Math.max(0, phrase.timer_s - body.elapsed_ms / 1000)
-    const serverScore  = Math.round(body.accuracy * 1000) + Math.floor(remaining_s) * 10
-    const sanitized    = body.player_name.replace(/[<>&"]/g, '').slice(0, 30)
+    const remaining_s = Math.max(0, phrase.timer_s - body.elapsed_ms / 1000)
+    const serverScore = Math.round(body.accuracy * 1000) + Math.floor(remaining_s) * 10
+    const sanitized   = body.player_name.replace(/[<>&"]/g, '').slice(0, 30)
 
+    // Insert individual score record
     const result = await db.insert(scores).values({
       phrase_id:   body.phrase_id,
       player_name: sanitized,
@@ -65,13 +85,41 @@ export const scoresRoute = new Elysia({ prefix: '/scores' })
       score:       serverScore,
     }).returning({ id: scores.id })
 
+    // Upsert player aggregate — same name+language → accumulate (non-fatal if table missing)
+    try {
+      await db.insert(playerStats).values({
+        player_name:  sanitized,
+        language:     phrase.language,
+        total_score:  serverScore,
+        count_easy:   phrase.difficulty === 'easy'   ? 1 : 0,
+        count_medium: phrase.difficulty === 'medium' ? 1 : 0,
+        count_hard:   phrase.difficulty === 'hard'   ? 1 : 0,
+      }).onConflictDoUpdate({
+        target: [playerStats.player_name, playerStats.language],
+        set: {
+          total_score:  sql`${playerStats.total_score} + ${serverScore}`,
+          count_easy:   phrase.difficulty === 'easy'
+            ? sql`${playerStats.count_easy} + 1`
+            : playerStats.count_easy,
+          count_medium: phrase.difficulty === 'medium'
+            ? sql`${playerStats.count_medium} + 1`
+            : playerStats.count_medium,
+          count_hard:   phrase.difficulty === 'hard'
+            ? sql`${playerStats.count_hard} + 1`
+            : playerStats.count_hard,
+          updated_at: sql`CURRENT_TIMESTAMP`,
+        },
+      })
+    } catch (e) {
+      console.warn('[player_stats] upsert skipped:', e)
+    }
+
     const rank = await db
       .select({ count: sql<number>`count(*)` })
-      .from(scores)
-      .innerJoin(phrases, eq(scores.phrase_id, phrases.id))
+      .from(playerStats)
       .where(and(
-        eq(phrases.language, phrase.language),
-        sql`${scores.score} > ${serverScore}`,
+        eq(playerStats.language, phrase.language),
+        sql`${playerStats.total_score} > ${serverScore}`,
       ))
       .get()
 
@@ -93,15 +141,15 @@ export const scoresRoute = new Elysia({ prefix: '/scores' })
       LANGS.map(async (lang) => {
         top[lang] = await db
           .select({
-            player_name: scores.player_name,
-            score:       scores.score,
-            phrase_id:   scores.phrase_id,
-            phrase_text: phrases.text,
+            player_name:  playerStats.player_name,
+            total_score:  playerStats.total_score,
+            count_easy:   playerStats.count_easy,
+            count_medium: playerStats.count_medium,
+            count_hard:   playerStats.count_hard,
           })
-          .from(scores)
-          .innerJoin(phrases, eq(scores.phrase_id, phrases.id))
-          .where(eq(phrases.language, lang))
-          .orderBy(desc(scores.score))
+          .from(playerStats)
+          .where(eq(playerStats.language, lang))
+          .orderBy(desc(playerStats.total_score))
           .limit(10)
       })
     )

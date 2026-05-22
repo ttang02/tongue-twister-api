@@ -2,9 +2,16 @@ import { Elysia } from 'elysia'
 import { node }    from '@elysiajs/node'
 import { cors }    from '@elysiajs/cors'
 import { swagger } from '@elysiajs/swagger'
+import { migrate } from 'drizzle-orm/libsql/migrator'
+import { db }      from './db/client'
 import { phrasesRoute } from './routes/phrases'
 import { scoresRoute }  from './routes/scores'
 import { speechRoute }  from './routes/speech'
+
+// Auto-apply pending migrations on startup
+await migrate(db, { migrationsFolder: './drizzle' }).catch(e =>
+  console.warn('[migrate] warning:', e)
+)
 
 const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',')
 

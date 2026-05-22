@@ -6,29 +6,32 @@ import type { Language, Difficulty } from '@/store/gameStore'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-interface ScoreRow {
-  id:          number
-  player_name: string
-  score:       number
-  accuracy:    number
-  elapsed_ms:  number
-  phrase_text: string
+interface PlayerRow {
+  player_name:  string
+  total_score:  number
+  count_easy:   number
+  count_medium: number
+  count_hard:   number
 }
 
-async function fetchScores(lang: Language, difficulty?: Difficulty): Promise<ScoreRow[]> {
-  const params = new URLSearchParams({ lang, limit: '10' })
-  if (difficulty) params.set('difficulty', difficulty)
-  const res = await fetch(`${API_URL}/scores?${params}`)
-  const json = await res.json() as { data: ScoreRow[] }
+async function fetchPlayers(lang: Language): Promise<PlayerRow[]> {
+  const params = new URLSearchParams({ lang, limit: '20' })
+  const res  = await fetch(`${API_URL}/scores/players?${params}`)
+  const json = await res.json() as { data: PlayerRow[] }
   return json.data
 }
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
+const DIFF_BADGE: Record<'easy' | 'medium' | 'hard', { label: string; color: string }> = {
+  easy:   { label: 'F', color: '#4ade80' },
+  medium: { label: 'M', color: '#fbbf24' },
+  hard:   { label: 'D', color: '#f87171' },
+}
+
 interface Props {
-  language:   Language
+  language:    Language
   difficulty?: Difficulty
-  highlight?: number
 }
 
 function SkeletonRow() {
@@ -36,18 +39,42 @@ function SkeletonRow() {
     <div className="flex items-center gap-3 px-4 py-3">
       <div className="skeleton w-6 h-4" />
       <div className="skeleton flex-1 h-4" />
+      <div className="skeleton w-24 h-4" />
       <div className="skeleton w-12 h-4" />
     </div>
   )
 }
 
-export function ScoreBoard({ language, difficulty, highlight }: Props) {
+function DiffCount({ count, diff }: { count: number; diff: 'easy' | 'medium' | 'hard' }) {
+  if (count === 0) return null
+  const b = DIFF_BADGE[diff]
+  return (
+    <span
+      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-bold tabular-nums"
+      style={{ background: `${b.color}20`, color: b.color }}
+      title={`${diff}: ${count} phrase${count > 1 ? 's' : ''}`}
+    >
+      {b.label}{count}
+    </span>
+  )
+}
+
+export function ScoreBoard({ language, difficulty }: Props) {
   const { t } = useTranslation()
   const { data, isLoading } = useQuery({
-    queryKey: ['scores', language, difficulty],
-    queryFn:  () => fetchScores(language, difficulty),
+    queryKey: ['players', language],
+    queryFn:  () => fetchPlayers(language),
     staleTime: 30_000,
   })
+
+  // Client-side filter by difficulty when selected
+  const rows = difficulty
+    ? data?.filter(r => {
+        if (difficulty === 'easy')   return r.count_easy   > 0
+        if (difficulty === 'medium') return r.count_medium > 0
+        return r.count_hard > 0
+      })
+    : data
 
   if (isLoading) {
     return (
@@ -57,7 +84,7 @@ export function ScoreBoard({ language, difficulty, highlight }: Props) {
     )
   }
 
-  if (!data || data.length === 0) {
+  if (!rows || rows.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 py-12 text-slate-500">
         <Trophy size={36} strokeWidth={1.5} />
@@ -66,23 +93,22 @@ export function ScoreBoard({ language, difficulty, highlight }: Props) {
     )
   }
 
-  const topScore = data[0]?.score ?? 1
+  const topScore = rows[0]?.total_score ?? 1
 
   return (
     <div className="divide-y divide-white/5">
-      {data.map((row, i) => {
-        const isHighlighted = row.id === highlight
-        const barWidth = Math.round((row.score / topScore) * 100)
+      {rows.map((row, i) => {
+        const barWidth = Math.round((row.total_score / topScore) * 100)
 
         return (
           <motion.div
-            key={row.id}
-            className={`relative flex items-center gap-3 px-4 py-3 transition-colors ${isHighlighted ? 'bg-white/8' : 'hover:bg-white/4'}`}
+            key={row.player_name}
+            className="relative flex items-center gap-3 px-4 py-3 hover:bg-white/4 transition-colors"
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.05, duration: 0.3 }}
           >
-            {/* Subtle score bar */}
+            {/* Score bar */}
             <div
               className="absolute inset-y-0 left-0 opacity-10 rounded-r-full transition-all duration-700"
               style={{ width: `${barWidth}%`, background: 'rgb(var(--p))' }}
@@ -94,31 +120,24 @@ export function ScoreBoard({ language, difficulty, highlight }: Props) {
             </span>
 
             {/* Player name */}
-            <span className={`relative flex-1 font-semibold truncate text-sm ${isHighlighted ? 'text-white' : 'text-slate-300'}`}>
+            <span className="relative flex-1 font-semibold truncate text-sm text-slate-300">
               {row.player_name}
-              {isHighlighted && (
-                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-md font-bold"
-                      style={{ background: 'rgb(var(--p)/0.25)', color: 'rgb(var(--p))' }}>
-                  toi
-                </span>
-              )}
             </span>
 
-            {/* Stats */}
-            <div className="relative flex items-center gap-3 text-right shrink-0">
-              <span className="hidden sm:block text-slate-500 text-xs tabular-nums">
-                {Math.round(row.accuracy * 100)}%
-              </span>
-              <span className="hidden sm:block text-slate-500 text-xs tabular-nums">
-                {(row.elapsed_ms / 1000).toFixed(1)}s
-              </span>
-              <span
-                className="font-black text-base tabular-nums"
-                style={{ color: 'rgb(var(--p))' }}
-              >
-                {row.score}
-              </span>
+            {/* Difficulty counts */}
+            <div className="relative hidden sm:flex items-center gap-1 shrink-0">
+              <DiffCount count={row.count_easy}   diff="easy"   />
+              <DiffCount count={row.count_medium} diff="medium" />
+              <DiffCount count={row.count_hard}   diff="hard"   />
             </div>
+
+            {/* Total score */}
+            <span
+              className="relative font-black text-base tabular-nums shrink-0"
+              style={{ color: 'rgb(var(--p))' }}
+            >
+              {row.total_score}
+            </span>
           </motion.div>
         )
       })}
