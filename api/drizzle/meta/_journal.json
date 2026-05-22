@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1779402067029,
+      "tag": "0000_burly_black_tom",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1779402067030,
+      "tag": "0001_player_stats",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1779402067031,
+      "tag": "0002_indexes",
+      "breakpoints": false
+    }
+  ]
+}

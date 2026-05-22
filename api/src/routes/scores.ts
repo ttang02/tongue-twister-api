@@ -50,20 +50,30 @@ export const scoresRoute = new Elysia({ prefix: '/scores' })
 
   // Aggregated player leaderboard
   .get('/players', async ({ query }) => {
-    const { lang, limit } = query
+    const { lang, difficulty, limit } = query
+
+    const conditions = [
+      lang       ? eq(playerStats.language, lang) : undefined,
+      difficulty === 'easy'   ? sql`${playerStats.count_easy} > 0`   : undefined,
+      difficulty === 'medium' ? sql`${playerStats.count_medium} > 0` : undefined,
+      difficulty === 'hard'   ? sql`${playerStats.count_hard} > 0`   : undefined,
+    ].filter((c): c is NonNullable<typeof c> => c !== undefined)
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined
 
     const rows = await db
       .select()
       .from(playerStats)
-      .where(lang ? eq(playerStats.language, lang) : undefined)
+      .where(where)
       .orderBy(desc(playerStats.total_score))
       .limit(limit ?? 50)
 
     return { data: rows, total: rows.length }
   }, {
     query: t.Object({
-      lang:  t.Optional(langEnum),
-      limit: t.Optional(t.Numeric({ minimum: 1, maximum: 200, default: 50 })),
+      lang:       t.Optional(langEnum),
+      difficulty: t.Optional(diffEnum),
+      limit:      t.Optional(t.Numeric({ minimum: 1, maximum: 200, default: 50 })),
     }),
   })
 
@@ -71,10 +81,31 @@ export const scoresRoute = new Elysia({ prefix: '/scores' })
     const phrase = await db.select().from(phrases).where(eq(phrases.id, body.phrase_id)).get()
     if (!phrase) return error(404, { error: 'Phrase not found' })
 
+    const sanitized = body.player_name.replace(/[<>&"]/g, '').slice(0, 30)
+
+    // Deduplicate: same player + same phrase → return existing score
+    const existing = await db
+      .select({ id: scores.id, score: scores.score })
+      .from(scores)
+      .where(and(eq(scores.player_name, sanitized), eq(scores.phrase_id, body.phrase_id)))
+      .get()
+    if (existing) {
+      const rank = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(playerStats)
+        .where(and(
+          eq(playerStats.language, phrase.language),
+          sql`${playerStats.total_score} > ${existing.score}`,
+        )).get()
+      set.status = 200
+      return { id: existing.id, score: existing.score, rank: (rank?.count ?? 0) + 1, duplicate: true }
+    }
+
     // Recalculate score server-side to prevent cheating
+    const DIFF_MULTIPLIER: Record<string, number> = { easy: 1.0, medium: 1.5, hard: 2.5 }
     const remaining_s = Math.max(0, phrase.timer_s - body.elapsed_ms / 1000)
-    const serverScore = Math.round(body.accuracy * 1000) + Math.floor(remaining_s) * 10
-    const sanitized   = body.player_name.replace(/[<>&"]/g, '').slice(0, 30)
+    const multiplier  = DIFF_MULTIPLIER[phrase.difficulty] ?? 1.0
+    const serverScore = Math.round((Math.round(body.accuracy * 1000) + Math.floor(remaining_s) * 10) * multiplier)
 
     // Insert individual score record
     const result = await db.insert(scores).values({
@@ -114,12 +145,13 @@ export const scoresRoute = new Elysia({ prefix: '/scores' })
       console.warn('[player_stats] upsert skipped:', e)
     }
 
+    // Rank: how many scores on same phrase scored higher
     const rank = await db
       .select({ count: sql<number>`count(*)` })
-      .from(playerStats)
+      .from(scores)
       .where(and(
-        eq(playerStats.language, phrase.language),
-        sql`${playerStats.total_score} > ${serverScore}`,
+        eq(scores.phrase_id, body.phrase_id),
+        sql`${scores.score} > ${serverScore}`,
       ))
       .get()
 

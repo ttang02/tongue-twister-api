@@ -13,9 +13,40 @@ await migrate(db, { migrationsFolder: './drizzle' }).catch(e =>
   console.warn('[migrate] warning:', e)
 )
 
+// Simple in-memory rate limiter: max 30 POST req/min per IP
+const rateLimits = new Map<string, { count: number; resetAt: number }>()
+
+function checkRateLimit(ip: string, maxPerMin = 30): boolean {
+  const now   = Date.now()
+  const entry = rateLimits.get(ip)
+  if (!entry || now > entry.resetAt) {
+    rateLimits.set(ip, { count: 1, resetAt: now + 60_000 })
+    return true
+  }
+  if (entry.count >= maxPerMin) return false
+  entry.count++
+  return true
+}
+
+// Clean up stale entries every 5 minutes
+setInterval(() => {
+  const now = Date.now()
+  for (const [k, v] of rateLimits) if (now > v.resetAt) rateLimits.delete(k)
+}, 300_000)
+
 const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',')
 
 const app = new Elysia({ adapter: node() })
+
+  .onRequest(({ request, set }) => {
+    if (request.method === 'POST') {
+      const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'unknown'
+      if (!checkRateLimit(ip, 30)) {
+        set.status = 429
+        return { error: 'Too many requests — réessaie dans une minute' }
+      }
+    }
+  })
 
   .use(cors({
     origin:  (request) => {

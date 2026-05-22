@@ -18,6 +18,11 @@ interface Props {
 const COLORS = (primary: string) => [primary, '#ffffff', '#fbbf24', '#f472b6', primary, '#a78bfa']
 
 export function Confetti({ active, primaryColor }: Props) {
+  const prefersReduced = typeof window !== 'undefined'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  if (prefersReduced) return null
+
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const particles = useRef<Particle[]>([])
   const rafRef    = useRef<number>(0)

@@ -78,8 +78,11 @@ __pycache__/
 *.db-shm
 *.db-wal
 
-# Drizzle generated migrations
-api/drizzle/
+# Drizzle — keep SQL migration files, ignore only generated snapshots
+api/drizzle/meta/__snapshots/
+
+# TanStack Router auto-generated route tree
+app/src/routeTree.gen.ts
 
 # macOS
 .DS_Store

@@ -29,6 +29,12 @@ export const TIMER_MS: Record<Difficulty, number> = {
   hard:   10_000,
 }
 
+export const DIFF_MULTIPLIER: Record<Difficulty, number> = {
+  easy:   1.0,
+  medium: 1.5,
+  hard:   2.5,
+}
+
 export const ACCURACY_THRESHOLD: Record<Language, number> = {
   fr: 0.72,
   en: 0.75,
@@ -37,18 +43,20 @@ export const ACCURACY_THRESHOLD: Record<Language, number> = {
 }
 
 interface GameState {
-  phase:        GamePhase
-  language:     Language | null
-  difficulty:   Difficulty | null
-  phrase:       Phrase | null
-  transcript:   string
-  accuracy:     number
-  wordScores:   number[]
-  elapsedMs:    number
-  score:        number | null
-  sessionScore: number
-  sessionCount: number
-  playerName:   string
+  phase:          GamePhase
+  language:       Language | null
+  difficulty:     Difficulty | null
+  phrase:         Phrase | null
+  transcript:     string
+  accuracy:       number
+  wordScores:     number[]
+  elapsedMs:      number
+  score:          number | null
+  sessionScore:   number
+  sessionCount:   number
+  sessionStreak:  number
+  threshold:      number
+  playerName:     string
 }
 
 interface GameActions {
@@ -66,18 +74,20 @@ interface GameActions {
 }
 
 const initialState: GameState = {
-  phase:        'language_select',
-  language:     null,
-  difficulty:   null,
-  phrase:       null,
-  transcript:   '',
-  accuracy:     0,
-  wordScores:   [],
-  elapsedMs:    0,
-  score:        null,
-  sessionScore: 0,
-  sessionCount: 0,
-  playerName:   '',
+  phase:          'language_select',
+  language:       null,
+  difficulty:     null,
+  phrase:         null,
+  transcript:     '',
+  accuracy:       0,
+  wordScores:     [],
+  elapsedMs:      0,
+  score:          null,
+  sessionScore:   0,
+  sessionCount:   0,
+  sessionStreak:  0,
+  threshold:      0,
+  playerName:     '',
 }
 
 export const useGameStore = create<GameState & GameActions>()((set, get) => ({
@@ -99,24 +109,26 @@ export const useGameStore = create<GameState & GameActions>()((set, get) => ({
   stopRecording: () => set({ phase: 'processing' }),
 
   setResult: (transcript, accuracy, wordScores, elapsedMs) => {
-    const { language, phrase, sessionScore, sessionCount } = get()
+    const { language, phrase, sessionScore, sessionCount, sessionStreak } = get()
     const threshold   = ACCURACY_THRESHOLD[language ?? 'en']
     const success     = accuracy >= threshold
+    const multiplier  = DIFF_MULTIPLIER[get().difficulty ?? 'easy']
     const phraseScore = success && phrase
-      ? Math.round(accuracy * 1000) + Math.floor(Math.max(0, phrase.timer_s - elapsedMs / 1000)) * 10
+      ? Math.round((Math.round(accuracy * 1000) + Math.floor(Math.max(0, phrase.timer_s - elapsedMs / 1000)) * 10) * multiplier)
       : 0
     set({
-      transcript, accuracy, wordScores, elapsedMs,
-      phase:        success ? 'success' : 'failure',
-      score:        success ? phraseScore : null,
-      sessionScore: success ? sessionScore + phraseScore : sessionScore,
-      sessionCount: success ? sessionCount + 1 : sessionCount,
+      transcript, accuracy, wordScores, elapsedMs, threshold,
+      phase:         success ? 'success' : 'failure',
+      score:         success ? phraseScore : null,
+      sessionScore:  success ? sessionScore + phraseScore : sessionScore,
+      sessionCount:  success ? sessionCount + 1 : sessionCount,
+      sessionStreak: success ? sessionStreak + 1 : 0,
     })
   },
 
   timeout: () => set({ phase: 'timeout' }),
 
-  retry: () => set({ phase: 'phrase_display', transcript: '', accuracy: 0, wordScores: [], elapsedMs: 0, score: null }),
+  retry: () => set({ phase: 'phrase_display', transcript: '', accuracy: 0, wordScores: [], elapsedMs: 0, score: null, sessionStreak: 0 }),
 
   setPlayerName: (playerName) => set({ playerName }),
 

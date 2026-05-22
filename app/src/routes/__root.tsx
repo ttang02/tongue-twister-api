@@ -5,6 +5,7 @@ import { useGameStore } from '@/store/gameStore'
 import { LANG_THEME, DEFAULT_THEME } from '@/constants/themes'
 import { Onboarding } from '@/components/Onboarding'
 import { useOnboarding } from '@/hooks/useOnboarding'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 function RootLayout() {
   const { t }    = useTranslation()
@@ -70,7 +71,9 @@ function RootLayout() {
           paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))',
         }}
       >
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   )

@@ -2,10 +2,13 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
 import { Mic } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { LanguagePicker } from '@/components/LanguagePicker'
 import { DifficultyPicker } from '@/components/DifficultyPicker'
 import { useGameStore } from '@/store/gameStore'
 import type { Language, Difficulty } from '@/store/gameStore'
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 export const Route = createFileRoute('/')({ component: HomePage })
 
@@ -13,6 +16,16 @@ function HomePage() {
   const { t }    = useTranslation()
   const navigate = useNavigate()
   const { phase, selectLanguage, selectDifficulty } = useGameStore()
+
+  const { data: phraseCount } = useQuery({
+    queryKey: ['phrase-count'],
+    queryFn: async () => {
+      const res  = await fetch(`${API_URL}/phrases?limit=1`)
+      const json = await res.json() as { total: number }
+      return json.total
+    },
+    staleTime: 60 * 60_000,
+  })
 
   const handleLanguage = (lang: Language) => selectLanguage(lang)
 
@@ -97,7 +110,7 @@ function HomePage() {
 
       {/* Footer hint */}
       <p className="text-slate-600 text-xs text-center">
-        84 virelangues · 4 langues · tous devices
+        {phraseCount ?? 84} virelangues · 4 langues · tous devices
       </p>
     </div>
   )

@@ -13,7 +13,7 @@ import { LANG_THEME } from '@/constants/themes'
 import type { Phrase } from '@/store/gameStore'
 import { useSpeech } from '@/hooks/useSpeech'
 import { useGameTimer } from '@/hooks/useGameTimer'
-import { computeAccuracy, normalizeWord } from '@/hooks/useAccuracy'
+import { computeAccuracy, normalizeWord, expandCompounds } from '@/hooks/useAccuracy'
 import { useCountUp } from '@/hooks/useCountUp'
 
 export const Route = createFileRoute('/game')({ component: GamePage })
@@ -22,9 +22,10 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const PERM_ERRORS = ['mic_denied', 'mic_not_supported', 'recorder_not_supported']
 
 function SuccessPanel({
-  score, accuracy, sessionScore, sessionCount, t,
+  score, accuracy, sessionScore, sessionCount, sessionStreak, t,
 }: {
-  score: number; accuracy: number; sessionScore: number; sessionCount: number; t: (k: string) => string
+  score: number; accuracy: number; sessionScore: number; sessionCount: number
+  sessionStreak: number; t: (k: string) => string
 }) {
   const displayed        = useCountUp(score, 800)
   const displayedSession = useCountUp(sessionScore, 900)
@@ -50,6 +51,18 @@ function SuccessPanel({
         </span>
         <span className="text-xs uppercase tracking-widest text-slate-400 font-semibold">points</span>
       </div>
+
+      {/* Streak */}
+      {sessionStreak >= 2 && (
+        <motion.div
+          className="flex items-center justify-center gap-1 text-sm font-bold"
+          initial={{ scale: 0 }} animate={{ scale: 1 }}
+          transition={{ type: 'spring', bounce: 0.5, delay: 0.3 }}
+          style={{ color: '#f59e0b' }}
+        >
+          🔥 {sessionStreak} à la suite !
+        </motion.div>
+      )}
 
       {/* Session total */}
       {sessionCount > 0 && (
@@ -85,7 +98,7 @@ function GamePage() {
   const {
     language, difficulty, phrase,
     phase, score, wordScores, accuracy, playerName,
-    sessionScore, sessionCount,
+    sessionScore, sessionCount, sessionStreak, threshold,
     setPhrase, startRecording, stopRecording,
     setResult, timeout, retry, setPlayerName, goToLeaderboard,
   } = useGameStore()
@@ -117,14 +130,32 @@ function GamePage() {
           accuracy,
         }),
       })
-      return res.json() as Promise<{ id: number; score: number; rank: number }>
+      return res.json() as Promise<{ id: number; score: number; rank: number; duplicate?: boolean }>
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['scores'] })
+    onSuccess: (data, name) => {
+      if (data.duplicate) {
+        setDuplicateNotice(true)
+        setTimeout(() => setDuplicateNotice(false), 3000)
+      }
+      // Save name to localStorage history (deduplicated, max 10)
+      const trimmed = name.trim()
+      if (trimmed && trimmed !== 'Anonyme') {
+        const updated = [trimmed, ...savedNames.filter(n => n !== trimmed)].slice(0, 10)
+        setSavedNames(updated)
+        localStorage.setItem('tt_player_names', JSON.stringify(updated))
+      }
+      qc.invalidateQueries({ queryKey: ['players'] })
       goToLeaderboard()
       navigate({ to: '/leaderboard' })
     },
   })
+
+  // Pre-fill name from history on first success
+  useEffect(() => {
+    if (phase === 'success' && !playerName && savedNames.length > 0) {
+      setPlayerName(savedNames[0]!)
+    }
+  }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (phrases && phrases.length > 0 && !phrase) {
@@ -132,14 +163,19 @@ function GamePage() {
     }
   }, [phrases, phrase, setPhrase])
 
-  const elapsedMsRef   = useRef(0)
-  const startTimeRef   = useRef(0)
-  const autoStopRef    = useRef(false)
-  const autoRetryCount = useRef(0)
-  const apiErrorRef    = useRef(false)
-  const handleStartRef = useRef<() => Promise<void>>(() => Promise.resolve())
-  const handleStopRef  = useRef<() => Promise<void>>(() => Promise.resolve())
-  const [shaking, setShaking] = useState(false)
+  const elapsedMsRef    = useRef(0)
+  const startTimeRef    = useRef(0)
+  const autoStopRef     = useRef(false)
+  const autoRetryCount  = useRef(0)
+  const apiErrorRef     = useRef(false)
+  const handleStartRef  = useRef<() => Promise<void>>(() => Promise.resolve())
+  const handleStopRef   = useRef<() => Promise<void>>(() => Promise.resolve())
+  const liveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [shaking, setShaking]           = useState(false)
+  const [duplicateNotice, setDuplicateNotice] = useState(false)
+  const [savedNames, setSavedNames] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('tt_player_names') ?? '[]') } catch { return [] }
+  })
 
   // On timeout: still process audio — user may have said it in time
   const handleTimeout = () => {
@@ -214,16 +250,20 @@ function GamePage() {
     }
   }, [phase])
 
-  // Auto-validate via live transcript
+  // Auto-validate via live transcript (debounced 150ms)
   useEffect(() => {
     if (phase !== 'recording' || !speech.liveTranscript || !phrase) return
     if (autoStopRef.current) return
-    const spoken = speech.liveTranscript.trim().split(/\s+/).map(normalizeWord).filter(Boolean)
-    const target = phrase.text.trim().split(/\s+/).map(normalizeWord).filter(Boolean)
-    if (spoken.length < target.length) return
-    const { accuracy: acc } = computeAccuracy(speech.liveTranscript, phrase.text)
-    const autoStopThreshold = (ACCURACY_THRESHOLD[language ?? 'en'] ?? 0.72) * 0.9
-    if (acc >= autoStopThreshold) { autoStopRef.current = true; handleStop() }
+
+    if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current)
+    liveDebounceRef.current = setTimeout(() => {
+      const spoken = expandCompounds(speech.liveTranscript).trim().split(/\s+/).map(normalizeWord).filter(Boolean)
+      const target = expandCompounds(phrase.text).trim().split(/\s+/).map(normalizeWord).filter(Boolean)
+      if (spoken.length < target.length) return
+      const { accuracy: acc } = computeAccuracy(speech.liveTranscript, phrase.text)
+      const autoStopThreshold = (ACCURACY_THRESHOLD[language ?? 'en'] ?? 0.72) * 0.9
+      if (acc >= autoStopThreshold) { autoStopRef.current = true; handleStopRef.current() }
+    }, 150)
   }, [speech.liveTranscript, phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-retry mic errors only
@@ -283,6 +323,7 @@ function GamePage() {
             accuracy={accuracy}
             sessionScore={sessionScore}
             sessionCount={sessionCount}
+            sessionStreak={sessionStreak}
             t={t}
           />
         )}
@@ -298,7 +339,7 @@ function GamePage() {
             </p>
             {accuracy > 0 && phase === 'failure' && (
               <p className="text-slate-400 text-sm">
-                {Math.round(accuracy * 100)}% de précision — encore un effort !
+                {Math.round(accuracy * 100)}% obtenu — {Math.round(threshold * 100)}% requis
               </p>
             )}
           </motion.div>
@@ -340,8 +381,12 @@ function GamePage() {
 
           {/* Save score */}
           <div className="flex items-center gap-2 w-full">
+            <datalist id="player-names">
+              {savedNames.map(n => <option key={n} value={n} />)}
+            </datalist>
             <input
               type="text"
+              list="player-names"
               placeholder="Ton prénom"
               maxLength={30}
               value={playerName}
@@ -363,6 +408,36 @@ function GamePage() {
               {submitScore.isPending ? '…' : t('game.save_score')}
             </button>
           </div>
+
+          {/* Duplicate notice */}
+          {duplicateNotice && (
+            <motion.p
+              className="text-xs text-amber-400 text-center"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            >
+              ⚠ Score déjà enregistré pour cette phrase
+            </motion.p>
+          )}
+
+          {/* Difficulty progression CTA */}
+          {difficulty === 'easy' && sessionCount >= 2 && (
+            <motion.button
+              onClick={() => { useGameStore.setState({ difficulty: 'medium' }); handleNextPhrase() }}
+              className="text-xs text-slate-400 hover:text-white transition-colors underline underline-offset-2"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+            >
+              Essaie en Moyen ? 💪
+            </motion.button>
+          )}
+          {difficulty === 'medium' && sessionCount >= 2 && (
+            <motion.button
+              onClick={() => { useGameStore.setState({ difficulty: 'hard' }); handleNextPhrase() }}
+              className="text-xs text-slate-400 hover:text-white transition-colors underline underline-offset-2"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+            >
+              Prêt pour le Difficile ? 🔥
+            </motion.button>
+          )}
         </motion.div>
       )}
 

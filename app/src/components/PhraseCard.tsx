@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react'
-import { jaroWinkler, normalizeWord, WORD_CORRECT, WORD_APPROX } from '@/hooks/useAccuracy'
+import { jaroWinkler, normalizeWord, WORD_CORRECT, WORD_APPROX, expandCompounds } from '@/hooks/useAccuracy'
 
 interface Props {
   text:           string
@@ -37,7 +37,7 @@ function scoreToState(score: number): WordState {
 
 // Strip tokens that are purely punctuation (e.g. standalone "?", ",")
 function cleanPhraseWords(text: string): string[] {
-  return text.split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w))
+  return expandCompounds(text).split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w))
 }
 
 export function PhraseCard({ text, liveTranscript, wordScores, isRecording }: Props) {

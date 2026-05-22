@@ -14,8 +14,9 @@ interface PlayerRow {
   count_hard:   number
 }
 
-async function fetchPlayers(lang: Language): Promise<PlayerRow[]> {
+async function fetchPlayers(lang: Language, difficulty?: Difficulty): Promise<PlayerRow[]> {
   const params = new URLSearchParams({ lang, limit: '20' })
+  if (difficulty) params.set('difficulty', difficulty)
   const res  = await fetch(`${API_URL}/scores/players?${params}`)
   const json = await res.json() as { data: PlayerRow[] }
   return json.data
@@ -62,19 +63,12 @@ function DiffCount({ count, diff }: { count: number; diff: 'easy' | 'medium' | '
 export function ScoreBoard({ language, difficulty }: Props) {
   const { t } = useTranslation()
   const { data, isLoading } = useQuery({
-    queryKey: ['players', language],
-    queryFn:  () => fetchPlayers(language),
+    queryKey: ['players', language, difficulty],
+    queryFn:  () => fetchPlayers(language, difficulty),
     staleTime: 30_000,
   })
 
-  // Client-side filter by difficulty when selected
-  const rows = difficulty
-    ? data?.filter(r => {
-        if (difficulty === 'easy')   return r.count_easy   > 0
-        if (difficulty === 'medium') return r.count_medium > 0
-        return r.count_hard > 0
-      })
-    : data
+  const rows = data
 
   if (isLoading) {
     return (

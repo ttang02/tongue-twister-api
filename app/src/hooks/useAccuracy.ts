@@ -43,6 +43,15 @@ export function jaroWinkler(s1: string, s2: string): number {
   return j + prefix * 0.1 * (1 - j)
 }
 
+// Expand hyphenated and apostrophe-joined compounds into separate tokens
+// "as-tu" → "as tu", "l'heure" → "l heure"
+export function expandCompounds(text: string): string {
+  return text
+    .replace(/['']/g, "'")
+    .replace(/([a-zàâäéèêëîïôùûüÿæœ])'([a-zàâäéèêëîïôùûüÿæœ])/gi, '$1 $2')
+    .replace(/-/g, ' ')
+}
+
 export function normalizeWord(w: string): string {
   return w
     .toLowerCase()
@@ -53,6 +62,7 @@ export function normalizeWord(w: string): string {
 }
 
 // DP sequence alignment: maps each target word to its best-matching spoken word (in order).
+// Rolling two-row O(S) space — choice matrix kept for traceback.
 // Spoken words that don't map to any target word (fillers, extras) are skipped without penalty.
 // Missing target words receive score 0.
 function alignWords(targetWords: string[], spokenWords: string[]): number[] {
@@ -62,40 +72,46 @@ function alignWords(targetWords: string[], spokenWords: string[]): number[] {
   if (T === 0) return []
   if (S === 0) return new Array(T).fill(0)
 
-  // Precompute similarity matrix
-  const sim: number[][] = Array.from({ length: T }, (_, ti) =>
-    Array.from({ length: S }, (_, si) => jaroWinkler(targetWords[ti]!, spokenWords[si]!))
-  )
+  // Rolling two rows instead of full T×S matrix
+  let prev = new Float64Array(S + 1) // dp[t-1][*]
+  let curr = new Float64Array(S + 1) // dp[t][*]
 
-  // dp[t][s] = max cumulative score aligning target[0..t-1] to a subsequence of spoken[0..s-1]
-  const dp: number[][] = Array.from({ length: T + 1 }, () => new Array(S + 1).fill(0))
+  // Track choices for traceback: 0=skipTarget, 1=match, 2=skipSpoken
+  const choice = Array.from({ length: T + 1 }, () => new Uint8Array(S + 1))
 
   for (let t = 1; t <= T; t++) {
+    curr.fill(0)
     for (let s = 1; s <= S; s++) {
-      const match      = dp[t - 1]![s - 1]! + sim[t - 1]![s - 1]! // match target[t-1] ↔ spoken[s-1]
-      const skipSpoken = dp[t]![s - 1]!                              // skip spoken[s-1] (extra word)
-      const skipTarget = dp[t - 1]![s]!                              // miss target[t-1] (score = 0)
-      dp[t]![s] = Math.max(match, skipSpoken, skipTarget)
+      const sim        = jaroWinkler(targetWords[t - 1]!, spokenWords[s - 1]!)
+      const matchVal   = prev[s - 1]! + sim
+      const skipSpoken = curr[s - 1]!
+      const skipTarget = prev[s]!
+
+      if (matchVal >= skipSpoken && matchVal >= skipTarget) {
+        curr[s] = matchVal; choice[t]![s] = 1
+      } else if (skipSpoken >= skipTarget) {
+        curr[s] = skipSpoken; choice[t]![s] = 2
+      } else {
+        curr[s] = skipTarget; choice[t]![s] = 0
+      }
     }
+    ;[prev, curr] = [curr, prev]
   }
 
-  // Traceback — prioritise match > skipSpoken > skipTarget on ties
+  // Traceback using choice matrix
   const wordScores = new Array<number>(T).fill(0)
   let t = T, s = S
 
   while (t > 0) {
     if (s === 0) { t--; continue }
-    const cur           = dp[t]![s]!
-    const matchVal      = dp[t - 1]![s - 1]! + sim[t - 1]![s - 1]!
-    const skipSpokenVal = dp[t]![s - 1]!
-
-    if (Math.abs(cur - matchVal) < 1e-9) {
-      wordScores[t - 1] = sim[t - 1]![s - 1]!
+    const c = choice[t]![s]!
+    if (c === 1) {
+      wordScores[t - 1] = jaroWinkler(targetWords[t - 1]!, spokenWords[s - 1]!)
       t--; s--
-    } else if (Math.abs(cur - skipSpokenVal) < 1e-9) {
+    } else if (c === 2) {
       s--
     } else {
-      t-- // target word missed
+      t--
     }
   }
 
@@ -106,8 +122,8 @@ export function computeAccuracy(
   spoken: string,
   target: string
 ): { accuracy: number; wordScores: number[] } {
-  const rawSpoken   = spoken.split(/\s+/).map(normalizeWord).filter(Boolean)
-  const targetWords = target.split(/\s+/).map(normalizeWord).filter(Boolean)
+  const rawSpoken   = expandCompounds(spoken).split(/\s+/).map(normalizeWord).filter(Boolean)
+  const targetWords = expandCompounds(target).split(/\s+/).map(normalizeWord).filter(Boolean)
   const spokenWords = rawSpoken.filter(w => !FILLER_WORDS.has(w))
 
   if (targetWords.length === 0) return { accuracy: 0, wordScores: [] }
