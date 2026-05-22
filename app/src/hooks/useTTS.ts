@@ -1,8 +1,6 @@
-// Text-to-speech: Web Speech API for fr/en/ko, Google Cloud TTS for vi
+// Text-to-speech: Web Speech API — Google/Microsoft voice for vi, female heuristics for fr/en/ko
 import { useCallback, useEffect, useRef } from 'react'
 import type { Language } from '@/store/gameStore'
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 const LANG_BCP47: Record<Language, string> = {
   fr: 'fr-FR',
@@ -11,8 +9,7 @@ const LANG_BCP47: Record<Language, string> = {
   vi: 'vi-VN',
 }
 
-// Languages routed to server-side Google Cloud TTS (Neural2 voices)
-const CLOUD_TTS_LANGS = new Set<Language>(['vi'])
+// Vietnamese: use Google/Microsoft voice from Web Speech API (better quality than generic)
 
 // Per-language Web Speech API tuning — tonal languages keep pitch=1.0
 const LANG_TTS: Record<Language, { rate: number; pitch: number }> = {
@@ -61,7 +58,6 @@ function pickVoice(lang: string): SpeechSynthesisVoice | null {
 
 export function useTTS(language: Language | null) {
   const voicesReady = useRef(false)
-  const audioRef    = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     if (typeof speechSynthesis === 'undefined') return
@@ -71,52 +67,40 @@ export function useTTS(language: Language | null) {
     return () => speechSynthesis.removeEventListener('voiceschanged', load)
   }, [])
 
-  const speak = useCallback(async (text: string) => {
-    const lang = language ?? 'fr'
-
-    // Cloud TTS path (Vietnamese — vi-VN-Neural2-A)
-    if (CLOUD_TTS_LANGS.has(lang)) {
-      try {
-        const res = await fetch(`${API_URL}/speech/tts`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, language: lang }),
-        })
-        if (!res.ok) return  // fail silently — TTS is non-critical
-        const blob  = await res.blob()
-        const url   = URL.createObjectURL(blob)
-        // Stop any prior playback
-        if (audioRef.current) { audioRef.current.pause(); URL.revokeObjectURL(audioRef.current.src) }
-        const audio = new Audio(url)
-        audioRef.current = audio
-        audio.onended = () => URL.revokeObjectURL(url)
-        audio.play()
-      } catch {
-        // Cloud TTS unavailable — skip silently
-      }
-      return
-    }
-
-    // Web Speech API path (fr, en, ko)
+  const speak = useCallback((text: string) => {
     if (typeof speechSynthesis === 'undefined') return
     speechSynthesis.cancel()
 
+    const lang      = language ?? 'fr'
     const bcp47     = LANG_BCP47[lang]
-    const voice     = pickVoice(bcp47)
     const ttsConfig = LANG_TTS[lang]
-    const utt       = new SpeechSynthesisUtterance(text)
-    utt.lang        = bcp47
-    utt.rate        = ttsConfig.rate
-    utt.pitch       = ttsConfig.pitch
-    utt.volume      = 1
-    if (voice) utt.voice = voice
+
+    const utt   = new SpeechSynthesisUtterance(text)
+    utt.lang    = bcp47
+    utt.volume  = 1
+
+    if (lang === 'vi') {
+      // Vietnamese: prefer Google/Microsoft voices (best tonal quality)
+      const voices = speechSynthesis.getVoices()
+      const viVoice = voices.find(v =>
+        v.lang === 'vi-VN' &&
+        (v.name.includes('Google') || v.name.includes('Microsoft'))
+      )
+      if (viVoice) utt.voice = viVoice
+      utt.rate  = 0.9
+      utt.pitch = 1.0
+    } else {
+      const voice = pickVoice(bcp47)
+      if (voice) utt.voice = voice
+      utt.rate  = ttsConfig.rate
+      utt.pitch = ttsConfig.pitch
+    }
 
     speechSynthesis.speak(utt)
   }, [language])
 
   const cancel = useCallback(() => {
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel()
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
   }, [])
 
   return { speak, cancel }
