@@ -1,17 +1,11 @@
 import { Elysia, t } from 'elysia'
 import Groq from 'groq-sdk'
-import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts'
 
 const SUPPORTED_LANGS = ['fr', 'en', 'ko', 'vi'] as const
 type Lang = (typeof SUPPORTED_LANGS)[number]
 
 const MAX_BYTES = 10 * 1024 * 1024  // 10 MB
 const WHISPER_MODEL = 'whisper-large-v3-turbo'
-
-// Edge TTS voice mapping — neural voices, female
-const EDGE_VOICES: Partial<Record<Lang, string>> = {
-  vi: 'vi-VN-HoaiMyNeural',
-}
 
 export const speechRoute = new Elysia({ prefix: '/speech' })
 
@@ -49,29 +43,31 @@ export const speechRoute = new Elysia({ prefix: '/speech' })
     }),
   })
 
-  // TTS via Microsoft Edge neural voices (free, no API key)
+  // TTS proxy — Google Translate audio fetched server-side (avoids CORS)
   .get('/tts', async ({ query, error, set }) => {
     const { text, lang } = query
-    const l = (SUPPORTED_LANGS as readonly string[]).includes(lang) ? (lang as Lang) : 'vi'
-    const voiceName = EDGE_VOICES[l]
-    if (!voiceName) return error(400, { error: `TTS not available for: ${lang}` })
+    const tl = (SUPPORTED_LANGS as readonly string[]).includes(lang) ? lang : 'vi'
 
     try {
-      const tts = new MsEdgeTTS()
-      await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3)
-      const readable = tts.toStream(text)
-
-      const chunks: Buffer[] = []
-      for await (const chunk of readable) {
-        chunks.push(Buffer.from(chunk))
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${tl}&client=tw-ob&ttsspeed=0.8`
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://translate.google.com/',
+        },
+      })
+      if (!res.ok) {
+        console.error('[TTS proxy]', res.status, await res.text().catch(() => ''))
+        return error(502, { error: 'TTS unavailable' })
       }
 
+      const buffer = await res.arrayBuffer()
       set.headers['content-type'] = 'audio/mpeg'
       set.headers['cache-control'] = 'public, max-age=86400'
-      return Buffer.concat(chunks)
+      return Buffer.from(buffer)
     } catch (e) {
-      console.error('[Edge TTS]', e)
-      return error(502, { error: 'TTS generation failed' })
+      console.error('[TTS proxy]', e)
+      return error(502, { error: 'TTS failed' })
     }
   }, {
     query: t.Object({
