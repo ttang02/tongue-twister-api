@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
 import i18n from '@/i18n'
 
 export type Language   = 'fr' | 'en' | 'ko' | 'vi'
@@ -77,65 +76,41 @@ const initialState: GameState = {
   playerName: '',
 }
 
-export const useGameStore = create<GameState & GameActions>()(
-  immer((set) => ({
-    ...initialState,
+export const useGameStore = create<GameState & GameActions>()((set, get) => ({
+  ...initialState,
 
-    selectLanguage: (lang) => set((s) => {
-      s.language = lang
-      s.phase    = 'difficulty_select'
-      i18n.changeLanguage(lang)
-    }),
+  selectLanguage: (lang) => {
+    i18n.changeLanguage(lang)
+    set({ language: lang, phase: 'difficulty_select' })
+  },
 
-    selectDifficulty: (diff) => set((s) => {
-      s.difficulty = diff
-      s.phase      = 'phrase_display'
-    }),
+  selectDifficulty: (diff) => set({ difficulty: diff, phase: 'phrase_display' }),
 
-    setPhrase: (phrase) => set((s) => {
-      s.phrase = phrase
-    }),
+  setPhrase: (phrase) => set({ phrase }),
 
-    startRecording: () => set((s) => {
-      s.phase      = 'recording'
-      s.elapsedMs  = 0
-      s.transcript = ''
-      s.accuracy   = 0
-      s.wordScores = []
-    }),
+  startRecording: () => set({
+    phase: 'recording', elapsedMs: 0, transcript: '', accuracy: 0, wordScores: [],
+  }),
 
-    stopRecording: () => set((s) => {
-      s.phase = 'processing'
-    }),
+  stopRecording: () => set({ phase: 'processing' }),
 
-    setResult: (transcript, accuracy, wordScores, elapsedMs) => set((s) => {
-      const threshold = ACCURACY_THRESHOLD[s.language ?? 'en']
-      s.transcript = transcript
-      s.accuracy   = accuracy
-      s.wordScores = wordScores
-      s.elapsedMs  = elapsedMs
-      s.phase      = accuracy >= threshold ? 'success' : 'failure'
-      if (accuracy >= threshold && s.phrase) {
-        const remaining_s = Math.max(0, s.phrase.timer_s - elapsedMs / 1000)
-        s.score = Math.round(accuracy * 1000) + Math.floor(remaining_s) * 10
-      }
-    }),
+  setResult: (transcript, accuracy, wordScores, elapsedMs) => {
+    const { language, phrase } = get()
+    const threshold = ACCURACY_THRESHOLD[language ?? 'en']
+    const success   = accuracy >= threshold
+    const score     = success && phrase
+      ? Math.round(accuracy * 1000) + Math.floor(Math.max(0, phrase.timer_s - elapsedMs / 1000)) * 10
+      : null
+    set({ transcript, accuracy, wordScores, elapsedMs, phase: success ? 'success' : 'failure', score })
+  },
 
-    timeout: () => set((s) => { s.phase = 'timeout' }),
+  timeout: () => set({ phase: 'timeout' }),
 
-    retry: () => set((s) => {
-      s.phase      = 'phrase_display'
-      s.transcript = ''
-      s.accuracy   = 0
-      s.wordScores = []
-      s.elapsedMs  = 0
-      s.score      = null
-    }),
+  retry: () => set({ phase: 'phrase_display', transcript: '', accuracy: 0, wordScores: [], elapsedMs: 0, score: null }),
 
-    setPlayerName: (name) => set((s) => { s.playerName = name }),
+  setPlayerName: (playerName) => set({ playerName }),
 
-    goToLeaderboard: () => set((s) => { s.phase = 'leaderboard' }),
+  goToLeaderboard: () => set({ phase: 'leaderboard' }),
 
-    reset: () => set(() => ({ ...initialState })),
-  }))
-)
+  reset: () => set({ ...initialState }),
+}))
