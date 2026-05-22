@@ -1,12 +1,12 @@
 # Tongue Twister Game
 
-Un jeu de virelangues multilingue où le joueur prononce des phrases dans son micro. L'application transcrit la voix en temps réel via **Groq Whisper** (< 300 ms), valide la prononciation, et attribue un score basé sur la précision et le temps restant. Supporte le français, l'anglais, le coréen et le vietnamien.
+Un jeu de virelangues multilingue où le joueur prononce des phrases dans son micro. L'application transcrit la voix en temps réel via **Web Speech API**, valide la prononciation mot-à-mot (Jaro-Winkler), et attribue un score basé sur la précision et le temps restant. Supporte le français, l'anglais, le coréen et le vietnamien — aucune clé API requise.
 
 ---
 
 ## Fonctionnalités
 
-- **Micro intégré** — MediaRecorder API → Groq Whisper (< 300 ms), Web Speech API en fallback live
+- **Micro intégré** — Web Speech API (reconnaissance vocale temps réel, aucune clé API)
 - **Timer de jeu** — compte à rebours par difficulté (30 s / 20 s / 10 s), barre animée scaleX avec glow
 - **Validation stricte** — seuil de précision par langue, pas de score si raté
 - **Score** — précision × multiplicateur difficulté (×1.0 / ×1.5 / ×2.5) + bonus temps, count-up animé
@@ -38,7 +38,7 @@ Un jeu de virelangues multilingue où le joueur prononce des phrases dans son mi
 | Validation | TypeBox natif Elysia |
 | ORM | Drizzle ORM |
 | Base de données | SQLite (`better-sqlite3`) en dev · Turso LibSQL en prod |
-| Speech-to-Text | MediaRecorder + **Groq Whisper** `whisper-large-v3-turbo` |
+| Speech-to-Text | **Web Speech API** (Chrome, Edge, Android — natif, gratuit) |
 | Text-to-Speech | Web Speech API (fr/en/ko) · Google Translate TTS proxy (vi) |
 | TypeScript runtime | `tsx` (dev) |
 
@@ -50,7 +50,7 @@ Un jeu de virelangues multilingue où le joueur prononce des phrases dans son mi
 
 - **Node.js** >= 18 — [nodejs.org](https://nodejs.org)
 - **npm** >= 9 (inclus avec Node.js) — ou **pnpm** / **yarn**
-- Clé API **Groq** (gratuite) — [console.groq.com](https://console.groq.com)
+- **Chrome** ou **Edge** (Web Speech API requise pour la reconnaissance vocale)
 
 ### Installation & lancement
 
@@ -62,7 +62,7 @@ cd tongue-twister-api
 npm install
 
 # 2. Créer les fichiers .env
-cp api/.env.example api/.env      # → renseigner GROQ_API_KEY
+cp api/.env.example api/.env
 cp app/.env.example app/.env
 
 # 3. Installer les dépendances + migrer + seeder la BDD
@@ -89,7 +89,6 @@ pnpm run dev
 
 **`api/.env`**
 ```env
-GROQ_API_KEY=gsk_...          # Clé Groq (obligatoire)
 DATABASE_URL=file:./dev.db    # SQLite local
 TURSO_AUTH_TOKEN=             # Laisser vide en dev
 PORT=3000
@@ -150,8 +149,7 @@ tongue-twister-api/
 │   │   ├── routes/
 │   │   │   ├── phrases.ts    GET /phrases, GET /phrases/:id, POST /phrases
 │   │   │   ├── scores.ts     GET /scores, POST /scores, GET /scores/top, GET /scores/players
-│   │   │   └── speech.ts     POST /speech/transcribe → Groq Whisper
-│   │   │                     GET /speech/tts → Google Translate TTS proxy (vi)
+│   │   │   └── speech.ts     GET /speech/tts → Google Translate TTS proxy (vi)
 │   │   └── index.ts          entrée Elysia + CORS + Scalar docs
 │   ├── drizzle.config.ts
 │   └── tsconfig.json
@@ -169,7 +167,7 @@ tongue-twister-api/
     │   │   ├── LanguagePicker.tsx   cartes colorées par langue
     │   │   └── DifficultyPicker.tsx slide-in avec icônes colorées
     │   ├── hooks/
-    │   │   ├── useSpeech.ts         MediaRecorder + Whisper + Web Speech API
+    │   │   ├── useSpeech.ts         Web Speech API (reconnaissance vocale)
     │   │   ├── useGameTimer.ts      rAF countdown pause/resume
     │   │   ├── useAccuracy.ts       Jaro-Winkler DP alignment + expandCompounds
     │   │   ├── useTTS.ts            TTS: Web Speech API (fr/en/ko) + server proxy (vi)
@@ -193,13 +191,13 @@ tongue-twister-api/
 
 ## Compatibilité navigateurs
 
-| Navigateur | Capture audio | Transcription | PWA |
-|------------|---------------|---------------|-----|
-| Chrome / Edge | ✅ | Groq + Web Speech API live | ✅ |
-| Firefox | ✅ | Groq uniquement | ✅ |
-| Safari iOS 14+ | ✅ | Groq uniquement | ✅ Add to Home Screen |
-| Chrome Android | ✅ | Groq + Web Speech API live | ✅ |
-| Samsung Browser | ✅ | Groq uniquement | ✅ |
+| Navigateur | Reconnaissance vocale | TTS | PWA |
+|------------|----------------------|-----|-----|
+| Chrome / Edge | ✅ Web Speech API | ✅ | ✅ |
+| Chrome Android | ✅ Web Speech API | ✅ | ✅ |
+| Firefox | ❌ non supporté | ✅ (vi via proxy) | ✅ |
+| Safari iOS 14+ | ❌ non supporté | ✅ (vi via proxy) | ✅ |
+| Samsung Browser | ❌ non supporté | ✅ (vi via proxy) | ✅ |
 
 ---
 
@@ -232,12 +230,9 @@ echo "PORT=3001" >> api/.env
 echo "VITE_API_URL=http://localhost:3001" >> app/.env
 ```
 
-### La clé Groq est invalide
+### La reconnaissance vocale ne fonctionne pas
 
-Créer un compte gratuit sur [console.groq.com](https://console.groq.com), générer une clé API et la mettre dans `api/.env` :
-```env
-GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxx
-```
+Web Speech API nécessite **Chrome** ou **Edge** (desktop ou mobile). Firefox et Safari ne supportent pas cette API. Vérifier aussi que le micro est autorisé dans les paramètres du navigateur.
 
 ---
 
