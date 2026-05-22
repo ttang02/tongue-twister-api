@@ -15,6 +15,7 @@ import { useSpeech } from '@/hooks/useSpeech'
 import { useGameTimer } from '@/hooks/useGameTimer'
 import { computeAccuracy, normalizeWord, expandCompounds } from '@/hooks/useAccuracy'
 import { useCountUp } from '@/hooks/useCountUp'
+import { useTTS } from '@/hooks/useTTS'
 
 export const Route = createFileRoute('/game')({ component: GamePage })
 
@@ -188,6 +189,7 @@ function GamePage() {
   const timerDuration = difficulty ? TIMER_MS[difficulty] : 20_000
   const timer  = useGameTimer(timerDuration, handleTimeout)
   const speech = useSpeech(language ?? 'en')
+  const tts    = useTTS(language)
 
   const handleStart = async () => {
     autoStopRef.current = false
@@ -229,6 +231,7 @@ function GamePage() {
   const handleNextPhrase = () => {
     autoStopRef.current = false
     autoRetryCount.current = 0
+    tts.cancel()
     if (phrases && phrases.length > 0) {
       setPhrase(phrases[Math.floor(Math.random() * phrases.length)]!)
     }
@@ -238,6 +241,7 @@ function GamePage() {
   const handleRetry = () => {
     autoStopRef.current = false
     autoRetryCount.current = 0
+    tts.cancel()
     timer.reset(); speech.reset(); retry()
   }
 
@@ -249,6 +253,14 @@ function GamePage() {
       return () => clearTimeout(id)
     }
   }, [phase])
+
+  // Speak phrase aloud after result (success or failure) — female TTS voice
+  useEffect(() => {
+    if ((phase === 'success' || phase === 'failure' || phase === 'timeout') && phrase) {
+      const id = setTimeout(() => tts.speak(phrase.text), 600)
+      return () => { clearTimeout(id); tts.cancel() }
+    }
+  }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-validate via live transcript (debounced 150ms)
   useEffect(() => {
