@@ -9,6 +9,14 @@ const LANG_BCP47: Record<Language, string> = {
   vi: 'vi-VN',
 }
 
+// Per-language TTS tuning — tonal languages (vi, ko) MUST keep pitch=1.0
+const LANG_TTS: Record<Language, { rate: number; pitch: number }> = {
+  fr: { rate: 0.62, pitch: 1.05 },
+  en: { rate: 0.62, pitch: 1.05 },
+  ko: { rate: 0.55, pitch: 1.0 },  // pitch=1.0 — preserve Korean intonation
+  vi: { rate: 0.50, pitch: 1.0 },  // pitch=1.0 mandatory — 6 tones destroyed by any shift
+}
+
 // Pick best female voice for a given BCP-47 lang tag.
 // Prefers voices whose name contains "female" / "femme" / known female names.
 // Falls back to any voice matching the lang prefix.
@@ -75,10 +83,11 @@ export function useTTS(language: Language | null) {
     const bcp47  = LANG_BCP47[lang]
     const voice  = pickVoice(bcp47)
 
+    const ttsConfig  = LANG_TTS[lang]
     const utt        = new SpeechSynthesisUtterance(text)
     utt.lang         = bcp47
-    utt.rate         = 0.62   // slow + clear — learning pronunciation
-    utt.pitch        = 1.05   // near-neutral pitch → better articulation (high pitch = muddy)
+    utt.rate         = ttsConfig.rate
+    utt.pitch        = ttsConfig.pitch
     utt.volume       = 1
     if (voice) utt.voice = voice
 
