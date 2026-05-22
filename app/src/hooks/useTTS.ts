@@ -1,6 +1,8 @@
-// Text-to-speech via Web Speech API — female voice, language-matched
+// Text-to-speech: Web Speech API for fr/en/ko, Google Cloud TTS for vi
 import { useCallback, useEffect, useRef } from 'react'
 import type { Language } from '@/store/gameStore'
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 const LANG_BCP47: Record<Language, string> = {
   fr: 'fr-FR',
@@ -9,17 +11,18 @@ const LANG_BCP47: Record<Language, string> = {
   vi: 'vi-VN',
 }
 
-// Per-language TTS tuning — tonal languages (vi, ko) MUST keep pitch=1.0
+// Languages routed to server-side Google Cloud TTS (Neural2 voices)
+const CLOUD_TTS_LANGS = new Set<Language>(['vi'])
+
+// Per-language Web Speech API tuning — tonal languages keep pitch=1.0
 const LANG_TTS: Record<Language, { rate: number; pitch: number }> = {
   fr: { rate: 0.62, pitch: 1.05 },
   en: { rate: 0.62, pitch: 1.05 },
-  ko: { rate: 0.55, pitch: 1.0 },  // pitch=1.0 — preserve Korean intonation
-  vi: { rate: 0.50, pitch: 1.0 },  // pitch=1.0 mandatory — 6 tones destroyed by any shift
+  ko: { rate: 0.55, pitch: 1.0 },
+  vi: { rate: 0.50, pitch: 1.0 },  // unused — vi goes through cloud
 }
 
 // Pick best female voice for a given BCP-47 lang tag.
-// Prefers voices whose name contains "female" / "femme" / known female names.
-// Falls back to any voice matching the lang prefix.
 function pickVoice(lang: string): SpeechSynthesisVoice | null {
   const voices = speechSynthesis.getVoices()
   if (!voices.length) return null
@@ -31,18 +34,12 @@ function pickVoice(lang: string): SpeechSynthesisVoice | null {
   )
   if (!langVoices.length) return null
 
-  // Female heuristics — browser-specific voice name patterns
   const femaleKeywords = [
     'female', 'femme', 'féminin',
-    // macOS/iOS
-    'amélie', 'aurelie', 'thomas', // thomas is male — skip
-    'marie', 'audrey', 'alice',
-    // Google
+    'amélie', 'aurelie', 'marie', 'audrey', 'alice',
     'google français féminin', 'google uk english female',
-    // common female names across TTS engines
     'zira', 'hazel', 'susan', 'karen', 'moira', 'samantha', 'victoria',
     'ava', 'allison', 'joanna', 'salli', 'kendra', 'kimberly', 'ivy',
-    // Korean / Vietnamese
     'yuna', 'heami', 'seoyeon',
     'linh',
   ]
@@ -54,7 +51,6 @@ function pickVoice(lang: string): SpeechSynthesisVoice | null {
     return femaleKeywords.some(k => n.includes(k))
   })
 
-  // If no explicit female found, pick first non-male voice
   const nonMale = langVoices.find(v => {
     const n = v.name.toLowerCase()
     return !maleKeywords.some(k => n.includes(k))
@@ -65,32 +61,54 @@ function pickVoice(lang: string): SpeechSynthesisVoice | null {
 
 export function useTTS(language: Language | null) {
   const voicesReady = useRef(false)
+  const audioRef    = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     if (typeof speechSynthesis === 'undefined') return
-    // Voices load asynchronously on some browsers
     const load = () => { voicesReady.current = true }
-    speechSynthesis.getVoices()  // triggers load in Chrome
+    speechSynthesis.getVoices()
     speechSynthesis.addEventListener('voiceschanged', load)
     return () => speechSynthesis.removeEventListener('voiceschanged', load)
   }, [])
 
-  const speak = useCallback((text: string) => {
+  const speak = useCallback(async (text: string) => {
+    const lang = language ?? 'fr'
+
+    // Cloud TTS path (Vietnamese — vi-VN-Neural2-A)
+    if (CLOUD_TTS_LANGS.has(lang)) {
+      try {
+        const res = await fetch(`${API_URL}/speech/tts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, language: lang }),
+        })
+        if (!res.ok) return  // fail silently — TTS is non-critical
+        const blob  = await res.blob()
+        const url   = URL.createObjectURL(blob)
+        // Stop any prior playback
+        if (audioRef.current) { audioRef.current.pause(); URL.revokeObjectURL(audioRef.current.src) }
+        const audio = new Audio(url)
+        audioRef.current = audio
+        audio.onended = () => URL.revokeObjectURL(url)
+        audio.play()
+      } catch {
+        // Cloud TTS unavailable — skip silently
+      }
+      return
+    }
+
+    // Web Speech API path (fr, en, ko)
     if (typeof speechSynthesis === 'undefined') return
-    speechSynthesis.cancel()  // stop anything in progress
+    speechSynthesis.cancel()
 
-    const lang   = language ?? 'fr'
-    // Vietnamese Web Speech API quality too poor — skip
-    if (lang === 'vi') return
-    const bcp47  = LANG_BCP47[lang]
-    const voice  = pickVoice(bcp47)
-
-    const ttsConfig  = LANG_TTS[lang]
-    const utt        = new SpeechSynthesisUtterance(text)
-    utt.lang         = bcp47
-    utt.rate         = ttsConfig.rate
-    utt.pitch        = ttsConfig.pitch
-    utt.volume       = 1
+    const bcp47     = LANG_BCP47[lang]
+    const voice     = pickVoice(bcp47)
+    const ttsConfig = LANG_TTS[lang]
+    const utt       = new SpeechSynthesisUtterance(text)
+    utt.lang        = bcp47
+    utt.rate        = ttsConfig.rate
+    utt.pitch       = ttsConfig.pitch
+    utt.volume      = 1
     if (voice) utt.voice = voice
 
     speechSynthesis.speak(utt)
@@ -98,6 +116,7 @@ export function useTTS(language: Language | null) {
 
   const cancel = useCallback(() => {
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel()
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
   }, [])
 
   return { speak, cancel }
