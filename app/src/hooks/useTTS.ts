@@ -77,8 +77,8 @@ export function useTTS(language: Language | null) {
 
     const utt        = new SpeechSynthesisUtterance(text)
     utt.lang         = bcp47
-    utt.rate         = 0.82   // slightly slower — clearer for learning
-    utt.pitch        = 1.15   // slightly higher → more feminine
+    utt.rate         = 0.62   // slow + clear — learning pronunciation
+    utt.pitch        = 1.05   // near-neutral pitch → better articulation (high pitch = muddy)
     utt.volume       = 1
     if (voice) utt.voice = voice
 
