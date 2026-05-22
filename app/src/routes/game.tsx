@@ -259,6 +259,11 @@ function GamePage() {
             <p className="text-xl font-bold text-red-400">
               {phase === 'timeout' ? t('game.time_up') : t('game.try_again')}
             </p>
+            {accuracy > 0 && phase === 'failure' && (
+              <p className="text-slate-400 text-sm">
+                {Math.round(accuracy * 100)}% de précision — encore un effort !
+              </p>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

@@ -30,10 +30,10 @@ export const TIMER_MS: Record<Difficulty, number> = {
 }
 
 export const ACCURACY_THRESHOLD: Record<Language, number> = {
-  fr: 0.85,
-  en: 0.88,
-  ko: 0.80,
-  vi: 0.75,
+  fr: 0.72,
+  en: 0.75,
+  ko: 0.68,
+  vi: 0.65,
 }
 
 interface GameState {

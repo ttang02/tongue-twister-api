@@ -22,7 +22,7 @@ function RootLayout() {
         className="flex items-center justify-between px-5 py-3 shrink-0"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
       >
-        <Link to="/" className="flex items-center gap-2 font-extrabold text-lg tracking-tight group">
+        <Link to="/" onClick={() => useGameStore.getState().reset()} className="flex items-center gap-2 font-extrabold text-lg tracking-tight group">
           <span className="text-2xl transition-transform duration-300 group-hover:scale-110">
             {theme.flag}
           </span>
