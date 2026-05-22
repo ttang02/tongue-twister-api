@@ -36,6 +36,7 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
         className="relative flex items-center justify-center rounded-full text-white shadow-2xl select-none
                    focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30"
         style={{
+          touchAction: 'none',
           width:  96,
           height: 96,
           background: isRecording  ? '#ef4444'                :
@@ -47,7 +48,13 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
             ? '0 0 0 0 rgba(239,68,68,0.5)'
             : `0 8px 32px rgb(var(--p) / 0.4)`,
         }}
-        onClick={isRecording ? onStop : state === 'idle' ? onStart : isError ? onRetry : undefined}
+        onPointerDown={(e) => {
+          if (disabled || isProcessing) return
+          e.preventDefault()
+          if (isRecording) onStop()
+          else if (state === 'idle') onStart()
+          else if (isError && onRetry) onRetry()
+        }}
         animate={
           isRecording  ? { scale: [1, 1.06, 1] } :
           isProcessing ? { rotate: 360 }          :

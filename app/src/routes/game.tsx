@@ -19,6 +19,7 @@ import { useCountUp } from '@/hooks/useCountUp'
 export const Route = createFileRoute('/game')({ component: GamePage })
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+const PERM_ERRORS = ['mic_denied', 'mic_not_supported', 'recorder_not_supported']
 
 function SuccessPanel({ score, accuracy, t }: { score: number; accuracy: number; t: (k: string) => string }) {
   const displayed = useCountUp(score, 900)
@@ -113,8 +114,12 @@ function GamePage() {
     }
   }, [phrases, phrase, setPhrase])
 
-  const elapsedMsRef = useRef(0)
-  const startTimeRef = useRef(0)
+  const elapsedMsRef   = useRef(0)
+  const startTimeRef   = useRef(0)
+  const autoStopRef    = useRef(false)
+  const autoRetryCount = useRef(0)
+  // Always points to the latest handleStart — safe to call from setTimeout
+  const handleStartRef = useRef<() => Promise<void>>(() => Promise.resolve())
   const [shaking, setShaking] = useState(false)
 
   const handleTimeout = () => timeout()
@@ -123,14 +128,17 @@ function GamePage() {
   const speech = useSpeech(language ?? 'en')
 
   const handleStart = async () => {
+    autoStopRef.current = false
     startRecording()
     startTimeRef.current = Date.now()
     timer.start()
     const ok = await speech.start()
     if (!ok) { timer.reset(); retry() }
   }
+  handleStartRef.current = handleStart
 
   const handleStop = async () => {
+    if (phase !== 'recording') return
     timer.pause()
     stopRecording()
     elapsedMsRef.current = Date.now() - startTimeRef.current
@@ -153,11 +161,43 @@ function GamePage() {
     }
   }, [phase])
 
+  // Auto-validate: when live transcript covers all words with enough accuracy, stop automatically
+  useEffect(() => {
+    if (phase !== 'recording' || !speech.liveTranscript || !phrase) return
+    if (autoStopRef.current) return
+    const spoken = speech.liveTranscript.trim().split(/\s+/).filter(Boolean)
+    const target = phrase.text.trim().split(/\s+/).filter(Boolean)
+    if (spoken.length < target.length) return
+    const { accuracy: acc } = computeAccuracy(speech.liveTranscript, phrase.text)
+    if (acc >= 0.62) {
+      autoStopRef.current = true
+      handleStop()
+    }
+  }, [speech.liveTranscript, phase]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-retry transient errors (API failure, short audio, etc.) and auto-restart mic
+  useEffect(() => {
+    if (speech.state !== 'error') { autoRetryCount.current = 0; return }
+    if (PERM_ERRORS.includes(speech.error ?? '')) return
+    if (autoRetryCount.current >= 3) return
+    autoRetryCount.current++
+    const id = setTimeout(() => {
+      speech.reset()
+      retry()
+      setTimeout(() => handleStartRef.current(), 80)
+    }, 1200)
+    return () => clearTimeout(id)
+  }, [speech.state, speech.error]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleRetry = () => {
+    autoStopRef.current = false
+    autoRetryCount.current = 0
     timer.reset(); speech.reset(); retry()
   }
 
   const handleNextPhrase = () => {
+    autoStopRef.current = false
+    autoRetryCount.current = 0
     if (phrases && phrases.length > 0) {
       setPhrase(phrases[Math.floor(Math.random() * phrases.length)]!)
     }
