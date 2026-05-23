@@ -20,7 +20,7 @@ import { useTTS } from '@/hooks/useTTS'
 export const Route = createFileRoute('/game')({ component: GamePage })
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
-const PERM_ERRORS = ['mic_denied', 'mic_not_supported', 'recorder_not_supported']
+const PERM_ERRORS = ['mic_denied', 'mic_not_supported', 'recorder_not_supported', 'speech_not_supported']
 
 function SuccessPanel({
   score, accuracy, sessionScore, sessionCount, sessionStreak, t,
@@ -206,20 +206,17 @@ function GamePage() {
     timer.pause()
     stopRecording()
     elapsedMsRef.current = Date.now() - startTimeRef.current
-    const liveText = speech.liveTranscript.trim()
     try {
       const spoken = await speech.stop()
-      // Prefer Whisper transcript; fall back to live transcript if Whisper returns empty
-      const text = spoken.trim() || liveText
+      const text = spoken.trim() || speech.liveTranscript.trim()
+      if (!text) { timer.reset(); retry(); return }
       const { accuracy: acc, wordScores: ws } = computeAccuracy(text, phrase?.text ?? '')
       setResult(text, acc, ws, elapsedMsRef.current)
     } catch {
-      // Block auto-retry regardless of how we handle the error
-      apiErrorRef.current = true
-      // Whisper API failed — use live transcript (Web Speech API) if available
-      if (liveText) {
-        const { accuracy: acc, wordScores: ws } = computeAccuracy(liveText, phrase?.text ?? '')
-        setResult(liveText, acc, ws, elapsedMsRef.current)
+      const fallback = speech.liveTranscript.trim()
+      if (fallback) {
+        const { accuracy: acc, wordScores: ws } = computeAccuracy(fallback, phrase?.text ?? '')
+        setResult(fallback, acc, ws, elapsedMsRef.current)
       } else {
         timer.reset()
         retry()

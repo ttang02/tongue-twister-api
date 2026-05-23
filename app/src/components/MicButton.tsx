@@ -27,9 +27,10 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
   const errorLabel =
     error === 'mic_denied'             ? 'Accès micro refusé — autorise le micro dans le navigateur' :
     error === 'mic_not_supported'      ? 'Micro non supporté par ce navigateur' :
+    error === 'speech_not_supported'   ? 'Reconnaissance vocale non supportée — utilise Chrome ou Edge' :
     error === 'recorder_not_supported' ? 'Enregistrement audio non supporté' :
+    error?.startsWith('speech_')       ? 'Erreur reconnaissance vocale — réessaie' :
     error?.includes('short') || error?.includes('silent') ? 'Audio trop court — parle plus longtemps' :
-    error?.includes('configured')      ? 'Service vocal non configuré' :
                                          'Erreur — appuie pour réessayer'
 
   const label =

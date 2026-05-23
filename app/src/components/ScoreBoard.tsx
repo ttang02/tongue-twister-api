@@ -102,10 +102,15 @@ export function ScoreBoard({ language, difficulty }: Props) {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.05, duration: 0.3 }}
           >
-            {/* Score bar */}
+            {/* Score bar — scaleX avoids layout recalc */}
             <div
-              className="absolute inset-y-0 left-0 opacity-10 rounded-r-full transition-all duration-700"
-              style={{ width: `${barWidth}%`, background: 'rgb(var(--p))' }}
+              className="absolute inset-y-0 left-0 right-0 opacity-10 rounded-r-full"
+              style={{
+                background: 'rgb(var(--p))',
+                transformOrigin: 'left',
+                transform: `scaleX(${barWidth / 100})`,
+                transition: 'transform 700ms cubic-bezier(0.22, 1, 0.36, 1)',
+              }}
             />
 
             {/* Rank */}
