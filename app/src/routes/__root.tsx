@@ -24,10 +24,12 @@ function RootLayout() {
         style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
       >
         <Link to="/" onClick={() => useGameStore.getState().reset()} className="flex items-center gap-2 font-extrabold text-lg tracking-tight group">
-          <span className="text-2xl transition-transform duration-300 group-hover:scale-110">
-            {theme.flag}
-          </span>
-          <span className="text-gradient glow-text font-display">Virelangues</span>
+          <img
+            src="/logo.png"
+            alt=""
+            className="w-8 h-8 rounded-lg transition-transform duration-300 group-hover:scale-110"
+          />
+          <span className="text-gradient glow-text font-display">Tongue Twister</span>
         </Link>
 
         <div className="flex items-center gap-1">

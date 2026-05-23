@@ -2,6 +2,10 @@
 
 Un jeu de virelangues multilingue où le joueur prononce des phrases dans son micro. L'application transcrit la voix en temps réel via **Web Speech API**, valide la prononciation mot-à-mot (Jaro-Winkler), et attribue un score basé sur la précision et le temps restant. Supporte le français, l'anglais, le coréen et le vietnamien — aucune clé API requise.
 
+<p align="center">
+  <img src="app/public/how-to-play.png" alt="Comment jouer — 4 étapes" width="600" />
+</p>
+
 ---
 
 ## Fonctionnalités
