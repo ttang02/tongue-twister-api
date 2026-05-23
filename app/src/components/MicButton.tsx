@@ -74,9 +74,11 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
         aria-pressed={isRecording}
       >
         {isRecording && (
-          <span
-            className="absolute inset-0 rounded-full animate-ping"
+          <motion.span
+            className="absolute inset-0 rounded-full"
             style={{ background: 'rgba(239,68,68,0.35)' }}
+            animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
+            transition={{ repeat: Infinity, duration: 1.2, ease: 'easeOut' }}
           />
         )}
 

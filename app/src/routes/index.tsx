@@ -42,15 +42,13 @@ function HomePage() {
 
       {/* Hero */}
       <div className="text-center space-y-3">
-        <motion.div
+        <div
           className="inline-flex items-center justify-center w-20 h-20 rounded-full neon-pulse select-none"
           style={{ background: 'rgb(var(--p) / 0.15)', color: 'rgb(var(--p))' }}
-          animate={{ rotate: [0, -10, 10, -5, 5, 0] }}
-          transition={{ delay: 0.9, duration: 0.7, ease: 'easeInOut' }}
           aria-hidden
         >
           <Mic size={36} strokeWidth={2} />
-        </motion.div>
+        </div>
         <h1 className="text-4xl md:text-5xl font-black tracking-tight text-gradient glow-text font-display">
           {t('home.title')}
         </h1>

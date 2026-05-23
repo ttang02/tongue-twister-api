@@ -2,7 +2,6 @@ import { createRootRoute, Outlet, Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Trophy, HelpCircle } from 'lucide-react'
 import { useGameStore } from '@/store/gameStore'
-import { LANG_THEME, DEFAULT_THEME } from '@/constants/themes'
 import { Onboarding } from '@/components/Onboarding'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -12,17 +11,12 @@ function RootLayout() {
   const language = useGameStore((s) => s.language)
   const { showOnboarding, complete, reset: resetOnboarding } = useOnboarding()
 
-  const theme = language ? LANG_THEME[language] : DEFAULT_THEME
-
   return (
-    <div data-lang={language ?? undefined} className="min-h-svh flex flex-col" style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', width: '100%' }}>
+    <div data-lang={language ?? undefined} className="min-h-svh flex flex-col w-full">
       {showOnboarding && <Onboarding onDone={complete} />}
 
       {/* Header */}
-      <header
-        className="flex items-center justify-between px-5 py-3 shrink-0"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
-      >
+      <header className="flex items-center justify-between px-5 py-3 shrink-0 border-b border-white/7">
         <Link to="/" onClick={() => useGameStore.getState().reset()} className="flex items-center gap-2 font-extrabold text-lg tracking-tight group">
           <img
             src="/logo.png"
@@ -59,19 +53,7 @@ function RootLayout() {
 
       <main
         className="flex-1 flex flex-col items-center justify-center px-4 py-6 max-w-2xl mx-auto w-full"
-        style={{
-          flex: '1 1 auto',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          maxWidth: '42rem',
-          marginLeft: 'auto',
-          marginRight: 'auto',
-          width: '100%',
-          padding: '1.5rem 1rem',
-          paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))',
-        }}
+        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
       >
         <ErrorBoundary>
           <Outlet />
