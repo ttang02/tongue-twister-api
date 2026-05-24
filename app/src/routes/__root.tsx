@@ -5,11 +5,14 @@ import { useGameStore } from '@/store/gameStore'
 import { Onboarding } from '@/components/Onboarding'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { AnimatePresence, motion } from 'motion/react'
+import { useRouterState } from '@tanstack/react-router'
 
 function RootLayout() {
   const { t }    = useTranslation()
   const language = useGameStore((s) => s.language)
   const { showOnboarding, complete, reset: resetOnboarding } = useOnboarding()
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   return (
     <div data-lang={language ?? undefined} className="min-h-svh flex flex-col w-full">
@@ -59,7 +62,18 @@ function RootLayout() {
         style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
       >
         <ErrorBoundary>
-          <Outlet />
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={pathname}
+              className="flex flex-col items-center w-full"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </ErrorBoundary>
       </main>
     </div>

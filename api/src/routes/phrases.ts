@@ -20,7 +20,7 @@ export const phrasesRoute = new Elysia({ prefix: '/phrases' })
     const where = conditions.length > 0 ? and(...conditions) : undefined
 
     const [data, countResult] = await Promise.all([
-      db.select().from(phrases).where(where).limit(limit).offset(offset),
+      db.select().from(phrases).where(where).limit(limit ?? 20).offset(offset ?? 0),
       db.select({ count: sql<number>`count(*)` }).from(phrases).where(where),
     ])
 
@@ -34,12 +34,12 @@ export const phrasesRoute = new Elysia({ prefix: '/phrases' })
     }),
   })
 
-  .get('/:id', async ({ params, error }) => {
+  .get('/:id', async ({ params, status }) => {
     const id = Number(params.id)
-    if (isNaN(id)) return error(400, { error: 'Invalid id' })
+    if (isNaN(id)) return status(400, { error: 'Invalid id' })
 
     const row = await db.select().from(phrases).where(eq(phrases.id, id)).get()
-    if (!row) return error(404, { error: 'Phrase not found' })
+    if (!row) return status(404, { error: 'Phrase not found' })
 
     return row
   }, {

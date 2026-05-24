@@ -77,9 +77,9 @@ export const scoresRoute = new Elysia({ prefix: '/scores' })
     }),
   })
 
-  .post('/', async ({ body, set, error }) => {
+  .post('/', async ({ body, set, status }) => {
     const phrase = await db.select().from(phrases).where(eq(phrases.id, body.phrase_id)).get()
-    if (!phrase) return error(404, { error: 'Phrase not found' })
+    if (!phrase) return status(404, { error: 'Phrase not found' })
 
     const sanitized = body.player_name.replace(/[<>&"]/g, '').slice(0, 30)
 
@@ -104,7 +104,7 @@ export const scoresRoute = new Elysia({ prefix: '/scores' })
     // Reject submissions below the accuracy threshold (same thresholds as client)
     const ACCURACY_THRESHOLD: Record<string, number> = { fr: 0.72, en: 0.75, ko: 0.68, vi: 0.65 }
     const threshold = ACCURACY_THRESHOLD[phrase.language] ?? 0.72
-    if (body.accuracy < threshold) return error(422, { error: 'Accuracy below threshold' })
+    if (body.accuracy < threshold) return status(422, { error: 'Accuracy below threshold' })
 
     // Recalculate score server-side to prevent cheating
     const DIFF_MULTIPLIER: Record<string, number> = { easy: 1.0, medium: 1.5, hard: 2.5 }

@@ -8,6 +8,7 @@ interface Particle {
   rotation: number
   rotationSpeed: number
   life: number
+  shape: 'rect' | 'circle' | 'triangle'
 }
 
 interface Props {
@@ -44,6 +45,7 @@ export function Confetti({ active, primaryColor }: Props) {
       rotation:      Math.random() * Math.PI * 2,
       rotationSpeed: (Math.random() - 0.5) * 0.2,
       life:          1,
+      shape: (['rect', 'rect', 'circle', 'triangle'] as const)[Math.floor(Math.random() * 4)]!,
     }))
 
     const draw = () => {
@@ -64,7 +66,20 @@ export function Confetti({ active, primaryColor }: Props) {
         ctx.translate(p.x, p.y)
         ctx.rotate(p.rotation)
         ctx.fillStyle = p.color
-        ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2)
+        if (p.shape === 'circle') {
+          ctx.beginPath()
+          ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2)
+          ctx.fill()
+        } else if (p.shape === 'triangle') {
+          ctx.beginPath()
+          ctx.moveTo(0, -p.size / 2)
+          ctx.lineTo(p.size / 2, p.size / 2)
+          ctx.lineTo(-p.size / 2, p.size / 2)
+          ctx.closePath()
+          ctx.fill()
+        } else {
+          ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2)
+        }
         ctx.restore()
       }
 

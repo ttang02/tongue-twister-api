@@ -16,7 +16,7 @@ export const Route = createFileRoute('/')({ component: HomePage })
 function HomePage() {
   const { t }    = useTranslation()
   const navigate = useNavigate()
-  const { phase, selectLanguage, selectDifficulty } = useGameStore()
+  const { phase, language, selectLanguage, selectDifficulty } = useGameStore()
 
   const { data: phraseCount } = useQuery({
     queryKey: ['phrase-count'],
@@ -103,7 +103,7 @@ function HomePage() {
               </p>
               <span className="h-px flex-1 max-w-[4rem]" style={{ background: 'rgb(var(--p)/0.25)' }} />
             </div>
-            <DifficultyPicker onSelect={handleDifficulty} />
+            <DifficultyPicker onSelect={handleDifficulty} language={language} />
           </motion.div>
         )}
       </AnimatePresence>

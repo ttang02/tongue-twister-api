@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { motion } from 'motion/react'
 
 interface Props {
@@ -5,7 +6,7 @@ interface Props {
   remaining: number
 }
 
-export function GameTimer({ percent, remaining }: Props) {
+export const GameTimer = memo(function GameTimer({ percent, remaining }: Props) {
   const secs = Math.ceil(remaining / 1000)
 
   const barColor =
@@ -74,4 +75,4 @@ export function GameTimer({ percent, remaining }: Props) {
       </div>
     </div>
   )
-}
+})
