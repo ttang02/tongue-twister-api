@@ -101,6 +101,11 @@ export const scoresRoute = new Elysia({ prefix: '/scores' })
       return { id: existing.id, score: existing.score, rank: (rank?.count ?? 0) + 1, duplicate: true }
     }
 
+    // Reject submissions below the accuracy threshold (same thresholds as client)
+    const ACCURACY_THRESHOLD: Record<string, number> = { fr: 0.72, en: 0.75, ko: 0.68, vi: 0.65 }
+    const threshold = ACCURACY_THRESHOLD[phrase.language] ?? 0.72
+    if (body.accuracy < threshold) return error(422, { error: 'Accuracy below threshold' })
+
     // Recalculate score server-side to prevent cheating
     const DIFF_MULTIPLIER: Record<string, number> = { easy: 1.0, medium: 1.5, hard: 2.5 }
     const remaining_s = Math.max(0, phrase.timer_s - body.elapsed_ms / 1000)
@@ -161,7 +166,7 @@ export const scoresRoute = new Elysia({ prefix: '/scores' })
     body: t.Object({
       phrase_id:   t.Integer({ minimum: 1 }),
       player_name: t.String({ minLength: 1, maxLength: 30 }),
-      elapsed_ms:  t.Integer({ minimum: 0 }),
+      elapsed_ms:  t.Integer({ minimum: 0, maximum: 120_000 }),
       accuracy:    t.Number({ minimum: 0, maximum: 1 }),
     }),
   })

@@ -18,6 +18,7 @@ async function fetchPlayers(lang: Language, difficulty?: Difficulty): Promise<Pl
   const params = new URLSearchParams({ lang, limit: '20' })
   if (difficulty) params.set('difficulty', difficulty)
   const res  = await fetch(`${API_URL}/scores/players?${params}`)
+  if (!res.ok) throw new Error(`http_${res.status}`)
   const json = await res.json() as { data: PlayerRow[] }
   return json.data
 }
