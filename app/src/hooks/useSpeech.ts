@@ -8,11 +8,13 @@ export function useSpeech(language: string) {
   const [error, setError]         = useState<string | null>(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const finalRef       = useRef('')
+  const liveRef        = useRef('')  // ref mirror of liveTranscript — no stale closure in stop()
 
   const start = useCallback(async (): Promise<boolean> => {
     setError(null)
     setLive('')
     finalRef.current = ''
+    liveRef.current  = ''
 
     // Check Web Speech API support
     const SR = (window.SpeechRecognition ?? (window as any).webkitSpeechRecognition) as typeof SpeechRecognition | undefined
@@ -53,6 +55,7 @@ export function useSpeech(language: string) {
         }
         finalRef.current = final.trim()
         const combined = (final + interim).trim()
+        liveRef.current = combined
         setLive(combined)
       }
 
@@ -78,21 +81,22 @@ export function useSpeech(language: string) {
     if (!recognition) throw new Error('No recognition')
 
     return new Promise((resolve) => {
-      // Give a short delay to capture any last final results
       recognition.onend = () => {
         setState('done')
-        const transcript = (finalRef.current || liveTranscript).trim().toLowerCase()
+        // Use ref to avoid stale closure on liveTranscript state
+        const transcript = (finalRef.current || liveRef.current).trim().toLowerCase()
         resolve(transcript)
       }
       recognition.stop()
       recognitionRef.current = null
     })
-  }, [liveTranscript])
+  }, [])  // no deps — uses only refs
 
   const reset = useCallback(() => {
     recognitionRef.current?.stop()
     recognitionRef.current = null
     finalRef.current = ''
+    liveRef.current  = ''
     setState('idle')
     setLive('')
     setError(null)

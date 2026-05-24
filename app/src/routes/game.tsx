@@ -322,7 +322,7 @@ function GamePage() {
       <GameTimer percent={timer.percent} remaining={timer.remaining} />
 
       <motion.div
-        className={`w-full ${shaking ? 'shake' : ''}`}
+        className="w-full"
         animate={shaking ? { x: [-8, 8, -6, 6, 0] } : { x: 0 }}
         transition={{ duration: 0.4 }}
       >
@@ -357,7 +357,7 @@ function GamePage() {
             </p>
             {accuracy > 0 && phase === 'failure' && (
               <p className="text-slate-400 text-sm">
-                {Math.round(accuracy * 100)}% obtenu — {Math.round((threshold ?? 0.72) * 100)}% requis
+                {Math.round(accuracy * 100)}% obtenu — {Math.round(threshold * 100)}% requis
               </p>
             )}
           </motion.div>

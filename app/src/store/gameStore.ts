@@ -128,7 +128,7 @@ export const useGameStore = create<GameState & GameActions>()((set, get) => ({
 
   timeout: () => set({ phase: 'timeout' }),
 
-  retry: () => set({ phase: 'phrase_display', transcript: '', accuracy: 0, wordScores: [], elapsedMs: 0, score: null, sessionStreak: 0 }),
+  retry: () => set({ phase: 'phrase_display', transcript: '', accuracy: 0, wordScores: [], elapsedMs: 0, score: null }),
 
   setPlayerName: (playerName) => set({ playerName }),
 
