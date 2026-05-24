@@ -57,7 +57,8 @@ export function DifficultyPicker({ onSelect }: Props) {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: i * 0.08, type: 'spring', stiffness: 280, damping: 22 }}
-          whileTap={{ scale: 0.97 }}
+          whileHover={{ y: -3, boxShadow: `0 8px 28px rgba(255,255,255,0.06)` }}
+          whileTap={{ scale: 0.97, y: 0 }}
         >
           <div className="flex items-center gap-4">
             <div

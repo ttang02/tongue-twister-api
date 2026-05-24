@@ -23,7 +23,11 @@ export function LanguagePicker({ onSelect }: Props) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.07, type: 'spring', stiffness: 300, damping: 24 }}
-          whileHover={{ scale: 1.04, borderColor: `rgb(${theme.primary})` }}
+          whileHover={{
+            scale: 1.03,
+            borderColor: `rgb(${theme.primary})`,
+            boxShadow: `0 0 28px rgb(${theme.primary} / 0.25), 0 8px 24px rgba(0,0,0,0.3)`,
+          }}
           whileTap={{ scale: 0.97 }}
           aria-label={`Jouer en ${theme.label}`}
         >

@@ -74,12 +74,26 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
         aria-pressed={isRecording}
       >
         {isRecording && (
-          <motion.span
-            className="absolute inset-0 rounded-full"
-            style={{ background: 'rgba(239,68,68,0.35)' }}
-            animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
-            transition={{ repeat: Infinity, duration: 1.2, ease: 'easeOut' }}
-          />
+          <>
+            <motion.span
+              className="absolute inset-0 rounded-full"
+              style={{ background: 'rgba(239,68,68,0.4)' }}
+              animate={{ scale: [1, 1.7], opacity: [0.6, 0] }}
+              transition={{ repeat: Infinity, duration: 1.4, ease: 'easeOut' }}
+            />
+            <motion.span
+              className="absolute inset-0 rounded-full"
+              style={{ background: 'rgba(239,68,68,0.25)' }}
+              animate={{ scale: [1, 2.2], opacity: [0.45, 0] }}
+              transition={{ repeat: Infinity, duration: 1.4, ease: 'easeOut', delay: 0.48 }}
+            />
+            <motion.span
+              className="absolute inset-0 rounded-full"
+              style={{ background: 'rgba(239,68,68,0.12)' }}
+              animate={{ scale: [1, 2.8], opacity: [0.3, 0] }}
+              transition={{ repeat: Infinity, duration: 1.4, ease: 'easeOut', delay: 0.96 }}
+            />
+          </>
         )}
 
         <AnimatePresence mode="wait" initial={false}>

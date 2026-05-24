@@ -77,11 +77,17 @@ button { cursor: pointer; }
 }
 
 /* ── Gradient text ─────────────────────────────────────────────────────────── */
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
 .text-gradient {
-  background: linear-gradient(135deg, rgb(var(--p)), #fff 60%, rgb(var(--p) / 0.7));
+  background: linear-gradient(135deg, rgb(var(--p)), #fff 55%, rgb(var(--p) / 0.8) 100%);
+  background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: gradient-shift 5s ease infinite;
 }
 
 /* ── Primary button ────────────────────────────────────────────────────────── */
@@ -96,8 +102,8 @@ button { cursor: pointer; }
   transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
   cursor: pointer;
 }
-.btn-primary:hover  { opacity: 0.92; box-shadow: 0 6px 28px rgb(var(--p) / 0.45); }
-.btn-primary:active { transform: scale(0.96); }
+.btn-primary:hover  { opacity: 0.92; transform: translateY(-2px); box-shadow: 0 10px 36px rgb(var(--p) / 0.5); }
+.btn-primary:active { transform: scale(0.96) translateY(0); }
 .btn-primary:disabled { opacity: 0.35; cursor: default; transform: none; }
 
 /* ── Glow helpers ──────────────────────────────────────────────────────────── */

@@ -41,8 +41,14 @@ export function GameTimer({ percent, remaining }: Props) {
       </div>
 
       {/* Track */}
-      <div className="relative h-4 w-full rounded-full overflow-hidden"
-           style={{ background: 'rgba(255,255,255,0.08)' }}>
+      <div
+        className="relative h-4 w-full rounded-full overflow-hidden"
+        style={{
+          background: 'rgba(255,255,255,0.08)',
+          boxShadow: percent <= 20 ? `0 0 12px ${barColor}55` : 'none',
+          transition: 'box-shadow 400ms ease',
+        }}
+      >
         {/* Glow layer — scaleX from left origin, no layout recalc */}
         <motion.div
           className="absolute inset-y-0 left-0 right-0 rounded-full blur-sm opacity-60"
