@@ -2,10 +2,26 @@ import { Elysia, t } from 'elysia'
 
 const SUPPORTED_LANGS = ['fr', 'en', 'ko', 'vi'] as const
 
+const ttsLimits = new Map<string, { count: number; resetAt: number }>()
+setInterval(() => {
+  const now = Date.now()
+  for (const [k, v] of ttsLimits) if (now > v.resetAt) ttsLimits.delete(k)
+}, 300_000)
+
+function checkTtsLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = ttsLimits.get(ip)
+  if (!entry || now > entry.resetAt) { ttsLimits.set(ip, { count: 1, resetAt: now + 60_000 }); return true }
+  if (entry.count >= 60) return false
+  entry.count++; return true
+}
+
 export const speechRoute = new Elysia({ prefix: '/speech' })
 
   // TTS proxy — Google Translate audio fetched server-side (avoids CORS)
-  .get('/tts', async ({ query, error, set }) => {
+  .get('/tts', async ({ query, error, set, request }) => {
+    const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'unknown'
+    if (!checkTtsLimit(ip)) return error(429, { error: 'Trop de requêtes TTS — réessaie dans 1 min' })
     const { text, lang } = query
     const tl = (SUPPORTED_LANGS as readonly string[]).includes(lang) ? lang : 'vi'
 

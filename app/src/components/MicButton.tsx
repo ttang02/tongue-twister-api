@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Mic, MicOff, Loader2, CheckCircle2 } from 'lucide-react'
 import type { SpeechState } from '@/hooks/useSpeech'
@@ -18,7 +19,7 @@ interface Props {
   error?:    string | null
 }
 
-export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: Props) {
+export const MicButton = memo(function MicButton({ state, onStart, onStop, onRetry, disabled, error }: Props) {
   const isProcessing = state === 'processing'
   const isSuccess    = state === 'done'
   const isError      = state === 'error'
@@ -122,4 +123,4 @@ export function MicButton({ state, onStart, onStop, onRetry, disabled, error }: 
       </p>
     </div>
   )
-}
+})

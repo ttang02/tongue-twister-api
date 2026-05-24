@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { jaroWinkler, normalizeWord, WORD_CORRECT, WORD_APPROX, expandCompounds } from '@/hooks/useAccuracy'
 
@@ -40,8 +41,8 @@ function cleanPhraseWords(text: string): string[] {
   return expandCompounds(text).split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w))
 }
 
-export function PhraseCard({ text, liveTranscript, wordScores, isRecording }: Props) {
-  const phraseWords = cleanPhraseWords(text)
+export const PhraseCard = memo(function PhraseCard({ text, liveTranscript, wordScores, isRecording }: Props) {
+  const phraseWords = useMemo(() => cleanPhraseWords(text), [text])
   const liveWords   = liveTranscript ? liveTranscript.trim().split(/\s+/).filter(Boolean) : []
   const hasLive     = isRecording && liveWords.length > 0
   const hasFinal    = !!wordScores && wordScores.length > 0
@@ -182,4 +183,4 @@ export function PhraseCard({ text, liveTranscript, wordScores, isRecording }: Pr
       </AnimatePresence>
     </div>
   )
-}
+})

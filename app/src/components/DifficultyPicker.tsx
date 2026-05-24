@@ -2,7 +2,11 @@ import type { ReactNode } from 'react'
 import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { Zap, Flame, Skull } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import type { Difficulty } from '@/store/gameStore'
+import type { Language } from '@/store/gameStore'
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 const OPTIONS: {
   value: Difficulty
@@ -40,10 +44,28 @@ const OPTIONS: {
 
 interface Props {
   onSelect: (diff: Difficulty) => void
+  language: Language | null
 }
 
-export function DifficultyPicker({ onSelect }: Props) {
+export function DifficultyPicker({ onSelect, language }: Props) {
   const { t } = useTranslation()
+
+  const { data: counts } = useQuery({
+    queryKey: ['phrase-counts', language],
+    queryFn: async () => {
+      if (!language) return {} as Record<string, number>
+      const results = await Promise.all(
+        (['easy', 'medium', 'hard'] as const).map(diff =>
+          fetch(`${API_URL}/phrases?lang=${language}&difficulty=${diff}&limit=1`)
+            .then(r => r.json() as Promise<{ total: number }>)
+            .then(j => [diff, j.total] as const)
+        )
+      )
+      return Object.fromEntries(results) as Record<string, number>
+    },
+    enabled: !!language,
+    staleTime: 60 * 60_000,
+  })
 
   return (
     <div className="flex flex-col gap-3 w-full max-w-sm mx-auto">
@@ -70,6 +92,9 @@ export function DifficultyPicker({ onSelect }: Props) {
             <div>
               <p className="font-bold text-white text-base">{t(`difficulty.${value}`)}</p>
               <p className="text-slate-400 text-xs">{desc}</p>
+              {counts?.[value] !== undefined && counts[value] > 0 && (
+                <p className="text-slate-500 text-xs tabular-nums">{counts[value]} phrases</p>
+              )}
             </div>
           </div>
           <span
