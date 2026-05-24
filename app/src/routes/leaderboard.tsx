@@ -51,7 +51,7 @@ function LeaderboardPage() {
           return (
             <button
               key={code}
-              onClick={() => useGameStore.setState({ language: code })}
+              onClick={() => useGameStore.setState({ language: code, difficulty: undefined })}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold
                          transition-colors duration-200 cursor-pointer"
               style={{

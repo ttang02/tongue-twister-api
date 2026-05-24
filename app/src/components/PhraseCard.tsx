@@ -12,7 +12,7 @@ type WordState = 'idle' | 'active' | 'correct' | 'approximate' | 'missed'
 
 function getLiveWordStates(phraseWords: string[], liveWords: string[]): WordState[] {
   return phraseWords.map((pw, i) => {
-    if (i > liveWords.length) return 'idle'
+    if (i >= liveWords.length) return 'idle'
     if (i === liveWords.length) return 'active'
     const score = jaroWinkler(normalizeWord(liveWords[i] ?? ''), normalizeWord(pw))
     if (score >= WORD_CORRECT) return 'correct'

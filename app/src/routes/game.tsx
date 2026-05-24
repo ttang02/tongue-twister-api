@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
-import { Loader2, Trophy } from 'lucide-react'
+import { Loader2, Trophy, RefreshCw } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { PhraseCard } from '@/components/PhraseCard'
 import { MicButton } from '@/components/MicButton'
@@ -19,7 +19,7 @@ import { useTTS } from '@/hooks/useTTS'
 
 export const Route = createFileRoute('/game')({ component: GamePage })
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+const API_URL   = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const PERM_ERRORS = ['mic_denied', 'mic_not_supported', 'recorder_not_supported', 'speech_not_supported']
 
 function SuccessPanel({
@@ -44,7 +44,6 @@ function SuccessPanel({
 
       <p className="text-2xl font-black text-gradient glow-text font-display">{t('game.success')}</p>
 
-      {/* Phrase score */}
       <div className="inline-flex flex-col items-center gap-0.5 px-7 py-3 rounded-2xl glow-box"
            style={{ background: 'rgb(var(--p) / 0.12)' }}>
         <span className="text-4xl font-black tabular-nums font-display" style={{ color: 'rgb(var(--p))' }}>
@@ -53,7 +52,6 @@ function SuccessPanel({
         <span className="text-xs uppercase tracking-widest text-slate-400 font-semibold">points</span>
       </div>
 
-      {/* Streak */}
       {sessionStreak >= 2 && (
         <motion.div
           className="flex items-center justify-center gap-1 text-sm font-bold"
@@ -65,7 +63,6 @@ function SuccessPanel({
         </motion.div>
       )}
 
-      {/* Session total */}
       {sessionCount > 0 && (
         <motion.div
           className="flex items-center justify-center gap-2"
@@ -81,7 +78,6 @@ function SuccessPanel({
         </motion.div>
       )}
 
-      {/* Accuracy pill */}
       <div className="flex justify-center">
         <span className="px-3 py-1 rounded-full text-sm" style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80' }}>
           ✓ {Math.round(accuracy * 100)}% précision
@@ -108,29 +104,33 @@ function GamePage() {
     if (!language || !difficulty) navigate({ to: '/' })
   }, [language, difficulty, navigate])
 
-  const { data: phrases } = useQuery({
+  const { data: phrases, isError: phrasesError, refetch: refetchPhrases } = useQuery({
     queryKey: ['phrases', language, difficulty],
     queryFn: async () => {
       const res = await fetch(`${API_URL}/phrases?lang=${language}&difficulty=${difficulty}&limit=20`)
+      if (!res.ok) throw new Error(`http_${res.status}`)
       const json = await res.json() as { data: Phrase[] }
       return json.data
     },
     enabled: !!language && !!difficulty,
     staleTime: 5 * 60_000,
+    retry: 2,
   })
 
   const submitScore = useMutation({
     mutationFn: async (name: string) => {
+      if (!phrase) throw new Error('no_phrase')
       const res = await fetch(`${API_URL}/scores`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phrase_id:   phrase!.id,
+          phrase_id:   phrase.id,
           player_name: name,
           elapsed_ms:  elapsedMsRef.current,
           accuracy,
         }),
       })
+      if (!res.ok) throw new Error(`http_${res.status}`)
       return res.json() as Promise<{ id: number; score: number; rank: number; duplicate?: boolean }>
     },
     onSuccess: (data, name) => {
@@ -138,7 +138,6 @@ function GamePage() {
         setDuplicateNotice(true)
         setTimeout(() => setDuplicateNotice(false), 3000)
       }
-      // Save name to localStorage history (deduplicated, max 10)
       const trimmed = name.trim()
       if (trimmed && trimmed !== 'Anonyme') {
         const updated = [trimmed, ...savedNames.filter(n => n !== trimmed)].slice(0, 10)
@@ -172,7 +171,7 @@ function GamePage() {
   const handleStartRef  = useRef<() => Promise<void>>(() => Promise.resolve())
   const handleStopRef   = useRef<() => Promise<void>>(() => Promise.resolve())
   const liveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [shaking, setShaking]           = useState(false)
+  const [shaking, setShaking]                 = useState(false)
   const [duplicateNotice, setDuplicateNotice] = useState(false)
   const [savedNames, setSavedNames] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('tt_player_names') ?? '[]') } catch { return [] }
@@ -218,6 +217,7 @@ function GamePage() {
         const { accuracy: acc, wordScores: ws } = computeAccuracy(fallback, phrase?.text ?? '')
         setResult(fallback, acc, ws, elapsedMsRef.current)
       } else {
+        apiErrorRef.current = true
         timer.reset()
         retry()
       }
@@ -251,7 +251,7 @@ function GamePage() {
     }
   }, [phase])
 
-  // Speak phrase aloud after result (success or failure) — female TTS voice
+  // Speak phrase aloud after result — helps user learn correct pronunciation
   useEffect(() => {
     if ((phase === 'success' || phase === 'failure' || phase === 'timeout') && phrase) {
       const id = setTimeout(() => tts.speak(phrase.text), 600)
@@ -294,6 +294,18 @@ function GamePage() {
   const isSuccess = phase === 'success'
   const isFailed  = phase === 'failure' || phase === 'timeout'
 
+  if (phrasesError) {
+    return (
+      <div className="flex flex-col items-center gap-5 text-center slide-up">
+        <p className="text-red-400 font-semibold">Impossible de charger les phrases</p>
+        <p className="text-slate-500 text-sm">Vérifie ta connexion et réessaie.</p>
+        <button onClick={() => refetchPhrases()} className="btn-primary flex items-center gap-2 px-6">
+          <RefreshCw size={16} /> Réessayer
+        </button>
+      </div>
+    )
+  }
+
   if (!phrase) {
     return (
       <div className="flex flex-col items-center gap-4 text-slate-400">
@@ -307,10 +319,8 @@ function GamePage() {
     <div className="flex flex-col items-center gap-5 w-full slide-up">
       <Confetti active={isSuccess} primaryColor={themeHex} />
 
-      {/* Timer */}
       <GameTimer percent={timer.percent} remaining={timer.remaining} />
 
-      {/* Phrase card */}
       <motion.div
         className={`w-full ${shaking ? 'shake' : ''}`}
         animate={shaking ? { x: [-8, 8, -6, 6, 0] } : { x: 0 }}
@@ -324,7 +334,6 @@ function GamePage() {
         />
       </motion.div>
 
-      {/* Result feedback */}
       <AnimatePresence mode="wait">
         {isSuccess && (
           <SuccessPanel
@@ -348,14 +357,13 @@ function GamePage() {
             </p>
             {accuracy > 0 && phase === 'failure' && (
               <p className="text-slate-400 text-sm">
-                {Math.round(accuracy * 100)}% obtenu — {Math.round(threshold * 100)}% requis
+                {Math.round(accuracy * 100)}% obtenu — {Math.round((threshold ?? 0.72) * 100)}% requis
               </p>
             )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Mic button — hide once result is known */}
       {!isSuccess && !isFailed && (phase === 'phrase_display' || isPlaying || speech.state === 'error') && (
         <div className="mt-1">
           <MicButton
@@ -373,14 +381,12 @@ function GamePage() {
         </div>
       )}
 
-      {/* Success actions */}
       {isSuccess && (
         <motion.div
           className="flex flex-col items-center gap-3 w-full max-w-xs"
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
         >
-          {/* Auto-advance button with countdown */}
           <button
             onClick={handleNextPhrase}
             className="btn-primary w-full text-base flex items-center justify-center gap-2"
@@ -388,7 +394,6 @@ function GamePage() {
             {t('game.next_phrase')}
           </button>
 
-          {/* Save score */}
           <div className="flex items-center gap-2 w-full">
             <datalist id="player-names">
               {savedNames.map(n => <option key={n} value={n} />)}
@@ -399,9 +404,10 @@ function GamePage() {
               placeholder="Ton prénom"
               maxLength={30}
               value={playerName}
+              disabled={submitScore.isPending}
               onChange={(e) => setPlayerName(e.target.value)}
               className="flex-1 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-slate-500
-                         focus:outline-none focus:ring-2"
+                         focus:outline-none focus:ring-2 disabled:opacity-50"
               style={{
                 background: 'rgba(255,255,255,0.07)',
                 border: '1px solid rgba(255,255,255,0.12)',
@@ -411,14 +417,14 @@ function GamePage() {
             <button
               onClick={() => submitScore.mutate(playerName || 'Anonyme')}
               disabled={submitScore.isPending}
-              className="shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-colors"
+              className="shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-colors
+                         disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)' }}
             >
-              {submitScore.isPending ? '…' : t('game.save_score')}
+              {submitScore.isPending ? <Loader2 size={16} className="animate-spin" /> : t('game.save_score')}
             </button>
           </div>
 
-          {/* Duplicate notice */}
           {duplicateNotice && (
             <motion.p
               className="text-xs text-amber-400 text-center"
@@ -428,7 +434,12 @@ function GamePage() {
             </motion.p>
           )}
 
-          {/* Difficulty progression CTA */}
+          {submitScore.isError && (
+            <p className="text-red-400 text-xs text-center">
+              Erreur lors de la sauvegarde — réessaie.
+            </p>
+          )}
+
           {difficulty === 'easy' && sessionCount >= 2 && (
             <motion.button
               onClick={() => { useGameStore.setState({ difficulty: 'medium' }); handleNextPhrase() }}
@@ -450,18 +461,17 @@ function GamePage() {
         </motion.div>
       )}
 
-      {/* Retry after failure */}
       {isFailed && (
         <motion.div
           className="flex gap-3"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
         >
-          <button onClick={handleRetry} className="btn-primary px-7">
+          <button onClick={handleRetry} className="btn-primary px-7 min-h-[44px]">
             {t('game.try_again')}
           </button>
           <button
             onClick={handleNextPhrase}
-            className="px-5 py-3 rounded-2xl text-slate-300 hover:text-white transition-colors"
+            className="px-5 py-3 rounded-2xl text-slate-300 hover:text-white transition-colors min-h-[44px]"
             style={{ background: 'rgba(255,255,255,0.08)' }}
           >
             {t('game.next_phrase')}
