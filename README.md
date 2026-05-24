@@ -33,7 +33,7 @@ Un jeu de virelangues multilingue où le joueur prononce des phrases dans son mi
 |--------|-------------|
 | Frontend | React 19, Vite 6, TypeScript 5, Tailwind CSS v4 |
 | Routing | TanStack Router v1 (file-based, type-safe) |
-| State | Zustand v5 + immer |
+| State | Zustand v5 |
 | Data | TanStack Query v5 |
 | Animation | Motion v12 (Framer Motion) |
 | i18n | react-i18next + détection automatique |
