@@ -38,7 +38,7 @@ Un jeu de virelangues multilingue où le joueur prononce des phrases dans son mi
 | Animation | Motion v12 (Framer Motion) |
 | i18n | react-i18next + détection automatique |
 | PWA | vite-plugin-pwa + Workbox |
-| Backend | **Node.js ≥ 18** + **Elysia.js** v1.3 |
+| Backend | **Node.js ≥ 18** + **Elysia.js** v1.4 |
 | Validation | TypeBox natif Elysia |
 | ORM | Drizzle ORM |
 | Base de données | SQLite (`better-sqlite3`) en dev · Turso LibSQL en prod |
@@ -121,6 +121,7 @@ VITE_API_URL=http://localhost:3000
 |----------|-------------|
 | `npm run dev` | Serveur en mode watch (tsx watch) |
 | `npm run start` | Serveur sans watch (production) |
+| `npm run typecheck` | Vérification TypeScript (tsc --noEmit) |
 | `npm run db:generate` | Génère les migrations Drizzle |
 | `npm run db:migrate` | Applique les migrations |
 | `npm run db:seed` | Insère les 84 phrases de démo |
@@ -207,22 +208,12 @@ tongue-twister-api/
 
 ## Dépannage
 
-### `better-sqlite3` ne compile pas
+### Node.js version insuffisante
 
-Ce module est natif (C++). Si l'installation échoue :
+L'API requiert **Node.js ≥ 18**. Vérifier :
 
 ```bash
-# Installer les outils de compilation (Linux/Debian)
-sudo apt install python3 make g++ -y
-npm install
-
-# macOS — installer Xcode Command Line Tools
-xcode-select --install
-npm install
-
-# Windows — installer windows-build-tools
-npm install --global windows-build-tools
-npm install
+node -v   # doit être >= 18.0.0
 ```
 
 ### Port déjà utilisé
@@ -239,7 +230,3 @@ echo "VITE_API_URL=http://localhost:3001" >> app/.env
 Web Speech API nécessite **Chrome** ou **Edge** (desktop ou mobile). Firefox et Safari ne supportent pas cette API. Vérifier aussi que le micro est autorisé dans les paramètres du navigateur.
 
 ---
-
-## Documentation complète
-
-Voir [PROJECT.md](./PROJECT.md) — spécification technique complète (20 sections) : architecture, pipeline audio, machine d'état, contrats API, schéma DB, accessibilité, sécurité, déploiement.
