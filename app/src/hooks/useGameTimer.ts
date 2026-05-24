@@ -3,9 +3,11 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 export function useGameTimer(durationMs: number, onTimeout: () => void) {
   const [remaining, setRemaining] = useState(durationMs)
   const [running, setRunning]     = useState(false)
-  const startedAt  = useRef<number>(0)
-  const frameRef   = useRef<number>(0)
-  const pausedAt   = useRef<number>(0)
+  const startedAt    = useRef<number>(0)
+  const frameRef     = useRef<number>(0)
+  const pausedAt     = useRef<number>(0)
+  const onTimeoutRef = useRef(onTimeout)
+  onTimeoutRef.current = onTimeout  // always points to latest, no stale closure
 
   const tick = useCallback(() => {
     const elapsed  = Date.now() - startedAt.current
@@ -14,7 +16,7 @@ export function useGameTimer(durationMs: number, onTimeout: () => void) {
 
     if (left === 0) {
       setRunning(false)
-      onTimeout()
+      onTimeoutRef.current()
       return
     }
 
@@ -24,7 +26,7 @@ export function useGameTimer(durationMs: number, onTimeout: () => void) {
     }
 
     frameRef.current = requestAnimationFrame(tick)
-  }, [durationMs, onTimeout])
+  }, [durationMs])  // stable — onTimeout read via ref, not closure
 
   const start = useCallback(() => {
     startedAt.current = Date.now()

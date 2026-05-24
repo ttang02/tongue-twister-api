@@ -81,7 +81,14 @@ export function useSpeech(language: string) {
     if (!recognition) throw new Error('No recognition')
 
     return new Promise((resolve) => {
+      // Safety timeout: if onend never fires (browser bug), resolve after 5s
+      const fallback = setTimeout(() => {
+        setState('done')
+        resolve((finalRef.current || liveRef.current).trim().toLowerCase())
+      }, 5000)
+
       recognition.onend = () => {
+        clearTimeout(fallback)
         setState('done')
         // Use ref to avoid stale closure on liveTranscript state
         const transcript = (finalRef.current || liveRef.current).trim().toLowerCase()
