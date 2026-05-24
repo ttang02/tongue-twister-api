@@ -35,13 +35,15 @@ function LeaderboardPage() {
     >
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-extrabold text-white font-display">{t('leaderboard.title')}</h1>
-        <button
+        <motion.button
           onClick={handleReset}
-          className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
+          className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white
+                     transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
+          whileTap={{ scale: 0.95 }}
         >
           <RotateCcw size={14} />
           <span className="hidden sm:inline">{t('game.play_again')}</span>
-        </button>
+        </motion.button>
       </div>
 
       {/* Language tabs */}
@@ -49,18 +51,21 @@ function LeaderboardPage() {
         {(Object.entries(LANG_THEME) as [Language, typeof LANG_THEME[Language]][]).map(([code, theme]) => {
           const active = lang === code
           return (
-            <button
+            <motion.button
               key={code}
               onClick={() => useGameStore.setState({ language: code, difficulty: undefined })}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold
-                         transition-colors duration-200 cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer"
               style={{
                 background: active ? `rgb(${theme.primary})` : 'rgba(255,255,255,0.07)',
                 color:      active ? '#fff' : '#94a3b8',
+                transition: 'background 200ms ease, color 200ms ease, box-shadow 200ms ease',
+                boxShadow:  active ? `0 4px 16px rgb(${theme.primary} / 0.35)` : 'none',
               }}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
             >
               {theme.flag} {code.toUpperCase()}
-            </button>
+            </motion.button>
           )
         })}
       </div>
@@ -68,16 +73,18 @@ function LeaderboardPage() {
       {/* Difficulty filter */}
       <div className="flex gap-2 flex-wrap">
         {DIFFICULTIES.map((d) => (
-          <button
+          <motion.button
             key={d.value ?? 'all'}
             onClick={() => useGameStore.setState({ difficulty: d.value })}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm
-                       transition-colors duration-200 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm cursor-pointer"
             style={{
               background: diff === d.value ? 'rgb(var(--p) / 0.2)' : 'rgba(255,255,255,0.05)',
               color:      diff === d.value ? 'rgb(var(--p))' : '#94a3b8',
               fontWeight: diff === d.value ? '600' : '400',
+              transition: 'background 200ms ease, color 200ms ease',
             }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
             {d.dot && (
               <span
@@ -86,7 +93,7 @@ function LeaderboardPage() {
               />
             )}
             {d.label}
-          </button>
+          </motion.button>
         ))}
       </div>
 

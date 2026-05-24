@@ -16,7 +16,10 @@ function RootLayout() {
       {showOnboarding && <Onboarding onDone={complete} />}
 
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-3 shrink-0 border-b border-white/7">
+      <header
+        className="flex items-center justify-between px-5 py-3 shrink-0 border-b border-white/8"
+        style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.25)' }}
+      >
         <Link to="/" onClick={() => useGameStore.getState().reset()} className="flex items-center gap-2 font-extrabold text-lg tracking-tight group">
           <img
             src="/logo.png"

@@ -18,17 +18,16 @@ interface Props {
 const COLORS = (primary: string) => [primary, '#ffffff', '#fbbf24', '#f472b6', primary, '#a78bfa']
 
 export function Confetti({ active, primaryColor }: Props) {
+  const canvasRef  = useRef<HTMLCanvasElement>(null)
+  const particles  = useRef<Particle[]>([])
+  const rafRef     = useRef<number>(0)
+
+  // hooks must come before any conditional return
   const prefersReduced = typeof window !== 'undefined'
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  if (prefersReduced) return null
-
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const particles = useRef<Particle[]>([])
-  const rafRef    = useRef<number>(0)
-
   useEffect(() => {
-    if (!active) return
+    if (!active || prefersReduced) return
     const canvas = canvasRef.current!
     const ctx    = canvas.getContext('2d')!
     canvas.width  = window.innerWidth
@@ -75,9 +74,9 @@ export function Confetti({ active, primaryColor }: Props) {
 
     rafRef.current = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [active, primaryColor])
+  }, [active, primaryColor, prefersReduced])
 
-  if (!active) return null
+  if (prefersReduced || !active) return null
 
   return (
     <canvas

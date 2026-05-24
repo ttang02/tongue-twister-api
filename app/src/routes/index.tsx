@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { LanguagePicker } from '@/components/LanguagePicker'
 import { DifficultyPicker } from '@/components/DifficultyPicker'
 import { useGameStore } from '@/store/gameStore'
+import { useCountUp } from '@/hooks/useCountUp'
 import type { Language, Difficulty } from '@/store/gameStore'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -26,6 +27,7 @@ function HomePage() {
     },
     staleTime: 60 * 60_000,
   })
+  const animatedCount = useCountUp(phraseCount ?? 0, 1000)
 
   const handleLanguage = (lang: Language) => selectLanguage(lang)
 
@@ -107,9 +109,18 @@ function HomePage() {
       </AnimatePresence>
 
       {/* Footer hint */}
-      <p className="text-slate-600 text-xs text-center">
-        {phraseCount ?? 84} virelangues · 4 langues · tous devices
-      </p>
+      <div className="flex items-center gap-3 text-xs text-slate-600">
+        <span className="flex items-center gap-1">
+          <span className="tabular-nums font-semibold text-slate-500">
+            {phraseCount ? animatedCount : '—'}
+          </span>
+          virelangues
+        </span>
+        <span className="w-px h-3 bg-white/10" />
+        <span>4 langues</span>
+        <span className="w-px h-3 bg-white/10" />
+        <span>tous devices</span>
+      </div>
     </div>
   )
 }
