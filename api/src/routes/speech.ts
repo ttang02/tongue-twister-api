@@ -19,9 +19,9 @@ function checkTtsLimit(ip: string): boolean {
 export const speechRoute = new Elysia({ prefix: '/speech' })
 
   // TTS proxy — Google Translate audio fetched server-side (avoids CORS)
-  .get('/tts', async ({ query, error, set, request }) => {
+  .get('/tts', async ({ query, status, set, request }) => {
     const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'unknown'
-    if (!checkTtsLimit(ip)) return error(429, { error: 'Trop de requêtes TTS — réessaie dans 1 min' })
+    if (!checkTtsLimit(ip)) return status(429, { error: 'Trop de requêtes TTS — réessaie dans 1 min' })
     const { text, lang } = query
     const tl = (SUPPORTED_LANGS as readonly string[]).includes(lang) ? lang : 'vi'
 
@@ -35,7 +35,7 @@ export const speechRoute = new Elysia({ prefix: '/speech' })
       })
       if (!res.ok) {
         console.error('[TTS proxy]', res.status, await res.text().catch(() => ''))
-        return error(502, { error: 'TTS unavailable' })
+        return status(502, { error: 'TTS unavailable' })
       }
 
       const buffer = await res.arrayBuffer()
@@ -44,7 +44,7 @@ export const speechRoute = new Elysia({ prefix: '/speech' })
       return Buffer.from(buffer)
     } catch (e) {
       console.error('[TTS proxy]', e)
-      return error(502, { error: 'TTS failed' })
+      return status(502, { error: 'TTS failed' })
     }
   }, {
     query: t.Object({
