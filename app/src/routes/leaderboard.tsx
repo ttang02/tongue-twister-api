@@ -22,7 +22,7 @@ function LeaderboardPage() {
   const { language: storeLang, difficulty: storeDiff, reset } = useGameStore()
 
   const lang = storeLang ?? 'fr'
-  const diff = storeDiff
+  const diff = storeDiff ?? undefined
 
   const handleReset = () => { reset(); navigate({ to: '/' }) }
 

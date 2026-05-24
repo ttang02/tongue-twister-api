@@ -348,7 +348,7 @@ function GamePage() {
 
   const handleShare = useCallback(() => {
     const text = `🎤 ${Math.round(accuracy * 100)}% de précision — ${score ?? 0} pts ! "${phrase?.text?.slice(0, 50)}" #Virelangues`
-    if ('share' in navigator) {
+    if (typeof navigator.share === 'function') {
       navigator.share({ title: 'Virelangues', text, url: window.location.origin }).catch(() => {})
     } else {
       navigator.clipboard?.writeText(text).catch(() => {})
@@ -528,7 +528,7 @@ function GamePage() {
             </p>
           )}
 
-          {('share' in navigator || !!navigator.clipboard) && (
+          {(typeof navigator.share === 'function' || !!navigator.clipboard) && (
             <motion.button
               onClick={handleShare}
               className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white
