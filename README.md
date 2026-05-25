@@ -230,3 +230,9 @@ echo "VITE_API_URL=http://localhost:3001" >> app/.env
 Web Speech API nécessite **Chrome** ou **Edge** (desktop ou mobile). Firefox et Safari ne supportent pas cette API. Vérifier aussi que le micro est autorisé dans les paramètres du navigateur.
 
 ---
+
+## Déploiement
+
+Voir [DEPLOYING.md](./DEPLOYING.md) — guide complet : Turso (base de données), Railway ou Fly.io (API), Vercel ou Netlify (frontend), variables d'environnement et checklist de mise en production.
+
+---
