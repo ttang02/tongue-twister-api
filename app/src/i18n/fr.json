@@ -3,7 +3,9 @@
   "home": {
     "title": "Virelangues",
     "subtitle": "Prononce la phrase avant la fin du temps",
-    "choose_language": "Choisis ta langue"
+    "choose_language": "Choisis ta langue",
+    "step_language": "Langue",
+    "step_difficulty": "Difficulté"
   },
   "difficulty": {
     "title": "Choisis la difficulté",
@@ -26,7 +28,26 @@
     "your_score": "Ton score",
     "accuracy": "Précision",
     "next_phrase": "Phrase suivante",
-    "play_again": "Rejouer"
+    "play_again": "Rejouer",
+    "timer_label": "Temps",
+    "points_label": "points",
+    "accuracy_short": "précision",
+    "new_record": "Nouveau record !",
+    "streak": "{{count}} à la suite !",
+    "practice_mode": "Entraînement",
+    "practice_active": "Entraînement ON",
+    "practice_hint": "Score non sauvegardé",
+    "tap_to_speak": "Appuie pour parler",
+    "tap_to_validate": "Appuie pour valider",
+    "session_total": "total · {{count}} phrases",
+    "score_duplicate": "Déjà enregistré pour cette phrase",
+    "save_error": "Erreur de sauvegarde — réessaie",
+    "upsell_medium": "Essaie en Moyen ?",
+    "upsell_hard": "Prêt pour le Difficile ?",
+    "share": "Partager",
+    "player_placeholder": "Ton prénom",
+    "timer_aria": "{{secs}} secondes restantes",
+    "accuracy_required": "— {{threshold}}% requis"
   },
   "leaderboard": {
     "title": "Classement",
@@ -40,6 +61,13 @@
     "mic_denied": "Accès au micro refusé. Autorise l'accès dans les réglages du navigateur.",
     "mic_unavailable": "Aucun micro détecté.",
     "api_error": "Erreur de connexion. Réessaie dans un instant.",
-    "browser_unsupported": "Ton navigateur ne supporte pas la capture audio."
+    "browser_unsupported": "Ton navigateur ne supporte pas la capture audio.",
+    "mic_denied_label": "Accès micro refusé — autorise dans les réglages du navigateur",
+    "mic_not_supported_label": "Micro non supporté par ce navigateur",
+    "speech_not_supported_label": "Reconnaissance vocale non supportée — utilise Chrome ou Edge",
+    "recorder_not_supported_label": "Enregistrement audio non supporté",
+    "speech_error_label": "Erreur vocale — réessaie",
+    "audio_short_label": "Audio trop court — parle plus longtemps",
+    "generic_error_label": "Erreur — appuie pour réessayer"
   }
 }

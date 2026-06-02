@@ -2,58 +2,69 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 
 export function useGameTimer(durationMs: number, onTimeout: () => void) {
   const [remaining, setRemaining] = useState(durationMs)
-  const [running, setRunning]     = useState(false)
-  const startedAt    = useRef<number>(0)
-  const frameRef     = useRef<number>(0)
-  const pausedAt     = useRef<number>(0)
+  const [running, setRunning] = useState(false)
+  const startedAt  = useRef<number>(0)
+  const intervalRef = useRef<number>(0)
+  const pausedAt   = useRef<number>(0)
+  const lastSecRef = useRef<number>(-1)
   const onTimeoutRef = useRef(onTimeout)
-  onTimeoutRef.current = onTimeout  // always points to latest, no stale closure
+  onTimeoutRef.current = onTimeout // always latest
 
   const tick = useCallback(() => {
-    const elapsed  = Date.now() - startedAt.current
-    const left     = Math.max(0, durationMs - elapsed)
-    setRemaining(left)
+    const elapsed = Date.now() - startedAt.current
+    const left = Math.max(0, durationMs - elapsed)
 
     if (left === 0) {
+      setRemaining(0)
       setRunning(false)
       onTimeoutRef.current()
+      clearInterval(intervalRef.current)
       return
     }
 
-    // Haptic at 5 seconds remaining
-    if (left <= 5000 && left > 4800 && 'vibrate' in navigator) {
-      navigator.vibrate(100)
-    }
+    // Only re-render when displayed second actually changes
+    const sec = Math.ceil(left / 1000)
+    if (sec !== lastSecRef.current) {
+      lastSecRef.current = sec
+      setRemaining(left)
 
-    frameRef.current = requestAnimationFrame(tick)
-  }, [durationMs])  // stable — onTimeout read via ref, not closure
+      // Haptic at 5 seconds remaining
+      if (sec === 5 && 'vibrate' in navigator) {
+        navigator.vibrate(100)
+      }
+    }
+  }, [durationMs])
 
   const start = useCallback(() => {
     startedAt.current = Date.now()
+    lastSecRef.current = -1
     setRunning(true)
-    frameRef.current  = requestAnimationFrame(tick)
+    intervalRef.current = window.setInterval(tick, 250)
   }, [tick])
 
   const pause = useCallback(() => {
-    cancelAnimationFrame(frameRef.current)
+    clearInterval(intervalRef.current)
     pausedAt.current = Date.now()
     setRunning(false)
   }, [])
 
   const resume = useCallback(() => {
-    // shift startedAt forward by paused duration
     startedAt.current += Date.now() - pausedAt.current
+    lastSecRef.current = -1
     setRunning(true)
-    frameRef.current = requestAnimationFrame(tick)
+    intervalRef.current = window.setInterval(tick, 250)
   }, [tick])
 
   const reset = useCallback(() => {
-    cancelAnimationFrame(frameRef.current)
+    clearInterval(intervalRef.current)
+    lastSecRef.current = -1
     setRemaining(durationMs)
     setRunning(false)
   }, [durationMs])
 
-  useEffect(() => () => cancelAnimationFrame(frameRef.current), [])
+  useEffect(() => {
+    return () => clearInterval(intervalRef.current)
+  }, [])
 
   const percent = (remaining / durationMs) * 100
 

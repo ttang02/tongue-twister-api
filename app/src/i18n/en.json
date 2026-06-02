@@ -3,7 +3,9 @@
   "home": {
     "title": "Tongue Twisters",
     "subtitle": "Pronounce the phrase before time runs out",
-    "choose_language": "Choose your language"
+    "choose_language": "Choose your language",
+    "step_language": "Language",
+    "step_difficulty": "Difficulty"
   },
   "difficulty": {
     "title": "Choose difficulty",
@@ -26,7 +28,26 @@
     "your_score": "Your score",
     "accuracy": "Accuracy",
     "next_phrase": "Next phrase",
-    "play_again": "Play again"
+    "play_again": "Play again",
+    "timer_label": "Time",
+    "points_label": "points",
+    "accuracy_short": "accuracy",
+    "new_record": "New record!",
+    "streak": "{{count}} in a row!",
+    "practice_mode": "Practice",
+    "practice_active": "Practice ON",
+    "practice_hint": "Score not saved",
+    "tap_to_speak": "Tap to speak",
+    "tap_to_validate": "Tap to validate",
+    "session_total": "total · {{count}} phrases",
+    "score_duplicate": "Already saved for this phrase",
+    "save_error": "Save failed, try again",
+    "upsell_medium": "Try Medium?",
+    "upsell_hard": "Try Hard?",
+    "share": "Share",
+    "player_placeholder": "Your name",
+    "timer_aria": "{{secs}} seconds remaining",
+    "accuracy_required": "— {{threshold}}% required"
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -40,6 +61,13 @@
     "mic_denied": "Microphone access denied. Allow access in your browser settings.",
     "mic_unavailable": "No microphone detected.",
     "api_error": "Connection error. Please try again.",
-    "browser_unsupported": "Your browser does not support audio capture."
+    "browser_unsupported": "Your browser does not support audio capture.",
+    "mic_denied_label": "Microphone access denied — allow in browser settings",
+    "mic_not_supported_label": "Microphone not supported by this browser",
+    "speech_not_supported_label": "Voice recognition not supported — use Chrome or Edge",
+    "recorder_not_supported_label": "Audio recording not supported",
+    "speech_error_label": "Voice error — try again",
+    "audio_short_label": "Audio too short — speak longer",
+    "generic_error_label": "Error — tap to retry"
   }
 }

@@ -3,7 +3,9 @@
   "home": {
     "title": "Câu Nói Lắp",
     "subtitle": "Phát âm câu trước khi hết giờ",
-    "choose_language": "Chọn ngôn ngữ của bạn"
+    "choose_language": "Chọn ngôn ngữ của bạn",
+    "step_language": "Ngôn ngữ",
+    "step_difficulty": "Độ khó"
   },
   "difficulty": {
     "title": "Chọn độ khó",
@@ -26,7 +28,26 @@
     "your_score": "Điểm của bạn",
     "accuracy": "Độ chính xác",
     "next_phrase": "Câu tiếp theo",
-    "play_again": "Chơi lại"
+    "play_again": "Chơi lại",
+    "timer_label": "Thời gian",
+    "points_label": "điểm",
+    "accuracy_short": "chính xác",
+    "new_record": "Kỷ lục mới!",
+    "streak": "{{count}} liên tiếp!",
+    "practice_mode": "Luyện tập",
+    "practice_active": "Luyện tập BẬT",
+    "practice_hint": "Điểm không được lưu",
+    "tap_to_speak": "Nhấn để nói",
+    "tap_to_validate": "Nhấn để xác nhận",
+    "session_total": "tổng · {{count}} câu",
+    "score_duplicate": "Điểm đã được lưu cho câu này",
+    "save_error": "Lưu thất bại — thử lại",
+    "upsell_medium": "Thử cấp trung bình?",
+    "upsell_hard": "Thử cấp khó?",
+    "share": "Chia sẻ",
+    "player_placeholder": "Tên của bạn",
+    "timer_aria": "còn {{secs}} giây",
+    "accuracy_required": "— cần {{threshold}}%"
   },
   "leaderboard": {
     "title": "Bảng xếp hạng",
@@ -40,6 +61,13 @@
     "mic_denied": "Quyền truy cập micro bị từ chối. Cho phép trong cài đặt trình duyệt.",
     "mic_unavailable": "Không phát hiện micro.",
     "api_error": "Lỗi kết nối. Vui lòng thử lại sau.",
-    "browser_unsupported": "Trình duyệt của bạn không hỗ trợ thu âm."
+    "browser_unsupported": "Trình duyệt của bạn không hỗ trợ thu âm.",
+    "mic_denied_label": "Quyền micro bị từ chối — cho phép trong cài đặt",
+    "mic_not_supported_label": "Trình duyệt không hỗ trợ micro",
+    "speech_not_supported_label": "Không hỗ trợ nhận diện giọng nói — dùng Chrome hoặc Edge",
+    "recorder_not_supported_label": "Ghi âm không được hỗ trợ",
+    "speech_error_label": "Lỗi giọng nói — thử lại",
+    "audio_short_label": "Âm thanh quá ngắn — nói lâu hơn",
+    "generic_error_label": "Lỗi — nhấn để thử lại"
   }
 }

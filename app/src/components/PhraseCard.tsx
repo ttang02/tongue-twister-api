@@ -1,9 +1,11 @@
 import { memo, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import { Check, Minus, X } from 'lucide-react'
 import { jaroWinkler, normalizeWord, WORD_CORRECT, WORD_APPROX, expandCompounds } from '@/hooks/useAccuracy'
 
 interface Props {
   text:           string
+  lang?:          string
   liveTranscript?: string
   wordScores?:    number[]
   isRecording?:   boolean
@@ -30,7 +32,15 @@ const STATE_STYLE: Record<WordState, { color: string; shadow?: string; opacity: 
   missed:      { color: '#f87171', opacity: 1,   shadow: '0 0 14px rgba(248,113,113,0.35)' },
 }
 
-function scoreToState(score: number): WordState {
+const CHIP_ICON: Record<'correct' | 'approximate' | 'missed', React.ReactNode> = {
+  correct:     <Check size={10} strokeWidth={2.5} />,
+  approximate: <Minus size={10} strokeWidth={2.5} />,
+  missed:      <X    size={10} strokeWidth={2.5} />,
+}
+
+type FinalWordState = 'correct' | 'approximate' | 'missed'
+
+function scoreToState(score: number): FinalWordState {
   if (score >= WORD_CORRECT) return 'correct'
   if (score >= WORD_APPROX) return 'approximate'
   return 'missed'
@@ -41,7 +51,7 @@ function cleanPhraseWords(text: string): string[] {
   return expandCompounds(text).split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w))
 }
 
-export const PhraseCard = memo(function PhraseCard({ text, liveTranscript, wordScores, isRecording }: Props) {
+function PhraseCardBase({ text, lang, liveTranscript, wordScores, isRecording }: Props) {
   const phraseWords = useMemo(() => cleanPhraseWords(text), [text])
   const liveWords   = liveTranscript ? liveTranscript.trim().split(/\s+/).filter(Boolean) : []
   const hasLive     = isRecording && liveWords.length > 0
@@ -72,7 +82,7 @@ export const PhraseCard = memo(function PhraseCard({ text, liveTranscript, wordS
       <div
         className="flex flex-wrap justify-center gap-x-3 gap-y-2 leading-snug"
         style={{ fontSize: 'clamp(1.3rem, 4.5vw, 2.25rem)' }}
-        lang="auto"
+        lang={lang}
       >
         {phraseWords.map((word, i) => {
           const ws    = wordStates[i] ?? 'idle'
@@ -164,7 +174,7 @@ export const PhraseCard = memo(function PhraseCard({ text, liveTranscript, wordS
               return (
                 <motion.span
                   key={i}
-                  className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
                   style={{
                     color:      s.color,
                     background: `${s.color}20`,
@@ -174,7 +184,8 @@ export const PhraseCard = memo(function PhraseCard({ text, liveTranscript, wordS
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ type: 'spring', duration: 0.3, bounce: 0.2, delay: i * 0.04 }}
                 >
-                  {ws === 'correct' ? '✓' : ws === 'approximate' ? '~' : '✗'} {phraseWords[i]}
+                  {CHIP_ICON[ws]}
+                  {phraseWords[i]}
                 </motion.span>
               )
             })}
@@ -183,4 +194,6 @@ export const PhraseCard = memo(function PhraseCard({ text, liveTranscript, wordS
       </AnimatePresence>
     </div>
   )
-})
+}
+
+export const PhraseCard = memo(PhraseCardBase, (prev, next) => prev.text===next.text && prev.isRecording===next.isRecording && (!prev.isRecording || prev.liveTranscript===next.liveTranscript) && prev.wordScores===next.wordScores);

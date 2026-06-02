@@ -58,7 +58,7 @@ function RootLayout() {
       </header>
 
       <main
-        className="flex-1 flex flex-col items-center justify-center px-4 py-6 max-w-2xl mx-auto w-full"
+        className="flex-1 flex flex-col items-center justify-center px-4 py-6 w-full"
         style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
       >
         <ErrorBoundary>

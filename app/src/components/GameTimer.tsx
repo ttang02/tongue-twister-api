@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   percent:   number
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export const GameTimer = memo(function GameTimer({ percent, remaining }: Props) {
+  const { t } = useTranslation()
   const secs = Math.ceil(remaining / 1000)
 
   const barColor =
@@ -25,7 +27,7 @@ export const GameTimer = memo(function GameTimer({ percent, remaining }: Props) 
   return (
     <div className="w-full space-y-2">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs text-slate-500 font-medium uppercase tracking-widest">Temps</span>
+        <span className="text-xs text-slate-500 font-medium uppercase tracking-widest">{t('game.timer_label')}</span>
         <motion.span
           className="text-2xl font-black tabular-nums font-mono"
           style={{
@@ -35,7 +37,7 @@ export const GameTimer = memo(function GameTimer({ percent, remaining }: Props) 
           animate={secs <= 5 ? { scale: [1, 1.15, 1] } : { scale: 1 }}
           transition={secs <= 5 ? { repeat: Infinity, duration: 0.5 } : {}}
           role="timer"
-          aria-label={`${secs} secondes restantes`}
+          aria-label={t('game.timer_aria', { secs })}
         >
           {secs}s
         </motion.span>
@@ -50,27 +52,27 @@ export const GameTimer = memo(function GameTimer({ percent, remaining }: Props) 
           transition: 'box-shadow 400ms ease',
         }}
       >
-        {/* Glow layer — scaleX from left origin, no layout recalc */}
-        <motion.div
+        {/* Glow layer — CSS transition for smooth interpolation between 1/s updates */}
+        <div
           className="absolute inset-y-0 left-0 right-0 rounded-full blur-sm opacity-60"
           style={{
             backgroundColor: barColor,
             transformOrigin: 'left',
-            transition: 'background-color 400ms ease',
+            transform: `scaleX(${scaleX})`,
+            transition: 'transform 1s linear, background-color 400ms ease',
+            willChange: 'transform',
           }}
-          animate={{ scaleX }}
-          transition={{ duration: 0.12, ease: 'linear' }}
         />
         {/* Solid bar */}
-        <motion.div
+        <div
           className="absolute inset-y-0 left-0 right-0 rounded-full"
           style={{
             backgroundColor: barColor,
             transformOrigin: 'left',
-            transition: 'background-color 400ms ease',
+            transform: `scaleX(${scaleX})`,
+            transition: 'transform 1s linear, background-color 400ms ease',
+            willChange: 'transform',
           }}
-          animate={{ scaleX }}
-          transition={{ duration: 0.12, ease: 'linear' }}
         />
       </div>
     </div>

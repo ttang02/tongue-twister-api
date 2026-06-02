@@ -1,26 +1,48 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useDebounce } from '@/hooks/useDebounce'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
-import { Loader2, Trophy, RefreshCw, Share2 } from 'lucide-react'
+import { Loader2, Trophy, RefreshCw, Share2, Star, Sparkles, Flame, GraduationCap, TrendingUp } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { PhraseCard } from '@/components/PhraseCard'
 import { MicButton } from '@/components/MicButton'
 import { GameTimer } from '@/components/GameTimer'
 import { Confetti } from '@/components/Confetti'
 import { useGameStore, TIMER_MS, ACCURACY_THRESHOLD } from '@/store/gameStore'
-import { LANG_THEME } from '@/constants/themes'
-import type { Phrase } from '@/store/gameStore'
+import { LANG_THEME, DEFAULT_THEME } from '@/constants/themes'
+import type { Difficulty, Phrase } from '@/store/gameStore'
 import { useSpeech } from '@/hooks/useSpeech'
 import { useGameTimer } from '@/hooks/useGameTimer'
 import { computeAccuracy, normalizeWord, expandCompounds } from '@/hooks/useAccuracy'
 import { useCountUp } from '@/hooks/useCountUp'
 import { useTTS } from '@/hooks/useTTS'
+import { useShallow } from 'zustand/react/shallow'
 
 export const Route = createFileRoute('/game')({ component: GamePage })
 
-const API_URL   = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+const API_URL     = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const PERM_ERRORS = ['mic_denied', 'mic_not_supported', 'recorder_not_supported', 'speech_not_supported']
+
+// Hoisted spring configs — constant per star index, no allocation inside .map()
+const STAR_SPRINGS = [
+  { type: 'spring' as const, delay: 0.25, bounce: 0.55 },
+  { type: 'spring' as const, delay: 0.35, bounce: 0.55 },
+  { type: 'spring' as const, delay: 0.45, bounce: 0.55 },
+]
+
+// Data-driven upsell — avoids duplicating identical button JSX
+const UPSELL_MAP = [
+  { from: 'easy',   to: 'medium' as Difficulty, key: 'game.upsell_medium' },
+  { from: 'medium', to: 'hard'   as Difficulty, key: 'game.upsell_hard'   },
+] as const
+
+// Typed difficulty label lookup — avoids dynamic template-literal keys
+const DIFF_KEYS: Record<Difficulty, Parameters<ReturnType<typeof useTranslation>['t']>[0]> = {
+  easy:   'difficulty.easy',
+  medium: 'difficulty.medium',
+  hard:   'difficulty.hard',
+}
 
 function getPersonalBest(phraseId: number): number {
   try { return Number(localStorage.getItem(`tt_pb_${phraseId}`)) || 0 } catch { return 0 }
@@ -36,95 +58,124 @@ function StarRating({ accuracy }: { accuracy: number }) {
       {[1, 2, 3].map((s) => (
         <motion.span
           key={s}
-          className="text-2xl select-none"
+          className="select-none"
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', delay: 0.15 + s * 0.1, bounce: 0.55 }}
+          transition={STAR_SPRINGS[s - 1]}
           style={{
-            color:  s <= filled ? '#fbbf24' : '#1e293b',
+            display: 'inline-block',
             filter: s <= filled ? 'drop-shadow(0 0 8px rgba(251,191,36,0.7))' : 'none',
           }}
           aria-hidden
         >
-          ★
+          <Star
+            size={24}
+            style={{
+              fill:  s <= filled ? '#fbbf24' : 'transparent',
+              color: s <= filled ? '#fbbf24' : 'rgba(255,255,255,0.15)',
+            }}
+          />
         </motion.span>
       ))}
     </div>
   )
 }
 
+// SuccessPanel uses useTranslation directly — no prop-drilling of t
 function SuccessPanel({
-  score, accuracy, sessionScore, sessionCount, sessionStreak, isNewRecord, t,
+  score, accuracy, sessionScore, sessionCount, sessionStreak, isNewRecord,
 }: {
   score: number; accuracy: number; sessionScore: number; sessionCount: number
-  sessionStreak: number; isNewRecord: boolean; t: (k: string) => string
+  sessionStreak: number; isNewRecord: boolean
 }) {
+  const { t }            = useTranslation()
   const displayed        = useCountUp(score, 800)
   const displayedSession = useCountUp(sessionScore, 900)
   return (
-    <motion.div key="success" className="text-center space-y-3 w-full pop-in" aria-live="assertive">
-      <motion.div
-        className="inline-flex items-center justify-center w-14 h-14 rounded-full mx-auto"
-        style={{ background: 'rgb(var(--p) / 0.15)' }}
-        animate={{ scale: [1, 1.15, 1], rotate: [0, -8, 8, 0] }}
-        transition={{ duration: 0.7 }}
-        aria-hidden
-      >
-        <span className="text-2xl select-none">🎉</span>
-      </motion.div>
-
-      <p className="text-2xl font-black text-gradient glow-text font-display">{t('game.success')}</p>
+    <motion.div
+      key="success"
+      className="text-center space-y-4 w-full pop-in"
+      aria-live="assertive"
+      exit={{ opacity: 0, scale: 0.95, y: -8 }}
+      transition={{ duration: 0.2 }}
+    >
+      {/* Icon + title */}
+      <div className="flex flex-col items-center gap-2">
+        <motion.div
+          className="inline-flex items-center justify-center w-12 h-12 rounded-full"
+          style={{ background: 'rgb(var(--p) / 0.15)' }}
+          animate={{ scale: [1, 1.15, 1], rotate: [0, -8, 8, 0] }}
+          transition={{ duration: 0.7 }}
+          aria-hidden
+        >
+          <Sparkles size={22} style={{ color: 'rgb(var(--p))' }} />
+        </motion.div>
+        <p className="text-2xl font-black font-display glow-text" style={{ color: 'rgb(var(--p))' }}>
+          {t('game.success')}
+        </p>
+      </div>
 
       <StarRating accuracy={accuracy} />
 
-      <div className="inline-flex flex-col items-center gap-0.5 px-7 py-3 rounded-2xl glow-box"
-           style={{ background: 'rgb(var(--p) / 0.12)' }}>
+      {/* Score hero */}
+      <div
+        className="inline-flex flex-col items-center gap-0.5 px-7 py-3 rounded-2xl glow-box"
+        style={{ background: 'rgb(var(--p) / 0.12)' }}
+      >
         <span className="text-4xl font-black tabular-nums font-display" style={{ color: 'rgb(var(--p))' }}>
           +{displayed}
         </span>
-        <span className="text-xs uppercase tracking-widest text-slate-400 font-semibold">points</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs uppercase tracking-widest text-slate-400 font-semibold">
+            {t('game.points_label')}
+          </span>
+          {isNewRecord && (
+            <motion.span
+              className="flex items-center gap-1 text-xs font-bold text-amber-400"
+              initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', bounce: 0.6, delay: 0.5 }}
+            >
+              <Trophy size={11} />
+              {t('game.new_record')}
+            </motion.span>
+          )}
+        </div>
       </div>
 
-      {isNewRecord && (
-        <motion.div
-          className="flex items-center justify-center gap-1.5"
-          initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', bounce: 0.6, delay: 0.5 }}
+      {/* Compact stats row */}
+      <div className="flex items-center justify-center gap-2 flex-wrap">
+        <span
+          className="flex items-center gap-1 px-3 py-1 rounded-full text-sm"
+          style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80' }}
         >
-          <span className="text-amber-400 text-sm font-bold">🏆 Nouveau record !</span>
-        </motion.div>
-      )}
-
-      {sessionStreak >= 2 && (
-        <motion.div
-          className="flex items-center justify-center gap-1 text-sm font-bold"
-          initial={{ scale: 0 }} animate={{ scale: 1 }}
-          transition={{ type: 'spring', bounce: 0.5, delay: 0.3 }}
-          style={{ color: '#f59e0b' }}
-        >
-          🔥 {sessionStreak} à la suite !
-        </motion.div>
-      )}
-
-      {sessionCount > 0 && (
-        <motion.div
-          className="flex items-center justify-center gap-2"
-          initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-        >
-          <Trophy size={13} className="text-yellow-400" />
-          <span className="text-sm font-bold tabular-nums" style={{ color: '#facc15' }}>
-            {displayedSession}
-          </span>
-          <span className="text-xs text-slate-400">
-            total · {sessionCount} phrase{sessionCount > 1 ? 's' : ''}
-          </span>
-        </motion.div>
-      )}
-
-      <div className="flex justify-center">
-        <span className="px-3 py-1 rounded-full text-sm" style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80' }}>
-          ✓ {Math.round(accuracy * 100)}% précision
+          {Math.round(accuracy * 100)}% {t('game.accuracy_short')}
         </span>
+
+        {sessionStreak >= 2 && (
+          <motion.span
+            className="flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold"
+            initial={{ scale: 0 }} animate={{ scale: 1 }}
+            transition={{ type: 'spring', bounce: 0.5, delay: 0.3 }}
+            style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}
+          >
+            <Flame size={13} />
+            {t('game.streak', { count: sessionStreak })}
+          </motion.span>
+        )}
+
+        {sessionCount > 0 && (
+          <motion.span
+            className="flex items-center gap-1.5 text-sm"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
+            style={{ color: '#facc15' }}
+          >
+            <Trophy size={12} />
+            <span className="font-bold tabular-nums">{displayedSession}</span>
+            <span className="text-xs text-slate-500">
+              {t('game.session_total', { count: sessionCount })}
+            </span>
+          </motion.span>
+        )}
       </div>
     </motion.div>
   )
@@ -135,13 +186,34 @@ function GamePage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
 
+  // PERF: Granular selectors — only re-render when specific field changes.
+  const language      = useGameStore((s) => s.language)
+  const difficulty    = useGameStore((s) => s.difficulty)
+  const phrase        = useGameStore((s) => s.phrase)
+  const phase         = useGameStore((s) => s.phase)
+  const score         = useGameStore((s) => s.score)
+  const wordScores    = useGameStore((s) => s.wordScores)
+  const accuracy      = useGameStore((s) => s.accuracy)
+  const playerName    = useGameStore((s) => s.playerName)
+  const sessionScore  = useGameStore((s) => s.sessionScore)
+  const sessionCount  = useGameStore((s) => s.sessionCount)
+  const sessionStreak = useGameStore((s) => s.sessionStreak)
+  const threshold     = useGameStore((s) => s.threshold)
+
+  // Actions never change identity — useShallow for stable ref
   const {
-    language, difficulty, phrase,
-    phase, score, wordScores, accuracy, playerName,
-    sessionScore, sessionCount, sessionStreak, threshold,
     setPhrase, startRecording, stopRecording,
     setResult, timeout, retry, setPlayerName, goToLeaderboard,
-  } = useGameStore()
+  } = useGameStore(useShallow((s) => ({
+    setPhrase:       s.setPhrase,
+    startRecording:  s.startRecording,
+    stopRecording:   s.stopRecording,
+    setResult:       s.setResult,
+    timeout:         s.timeout,
+    retry:           s.retry,
+    setPlayerName:   s.setPlayerName,
+    goToLeaderboard: s.goToLeaderboard,
+  })))
 
   useEffect(() => {
     if (!language || !difficulty) navigate({ to: '/' })
@@ -206,14 +278,21 @@ function GamePage() {
     }
   }, [phrases, phrase, setPhrase])
 
-  const elapsedMsRef    = useRef(0)
-  const startTimeRef    = useRef(0)
-  const autoStopRef     = useRef(false)
-  const autoRetryCount  = useRef(0)
-  const apiErrorRef     = useRef(false)
-  const handleStartRef  = useRef<() => Promise<void>>(() => Promise.resolve())
-  const handleStopRef   = useRef<() => Promise<void>>(() => Promise.resolve())
-  const liveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Memoize target word array — stable per phrase, avoids recompute on every transcript tick
+  const targetWords = useMemo(
+    () => phrase
+      ? expandCompounds(phrase.text).trim().split(/\s+/).map(normalizeWord).filter(Boolean)
+      : [],
+    [phrase?.text] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+
+  const elapsedMsRef   = useRef(0)
+  const startTimeRef   = useRef(0)
+  const autoStopRef    = useRef(false)
+  const autoRetryCount = useRef(0)
+  const apiErrorRef    = useRef(false)
+  const handleStartRef = useRef<() => Promise<void>>(() => Promise.resolve())
+  const handleStopRef  = useRef<() => Promise<void>>(() => Promise.resolve())
   const [shaking, setShaking]                 = useState(false)
   const [duplicateNotice, setDuplicateNotice] = useState(false)
   const [isNewRecord, setIsNewRecord]         = useState(false)
@@ -307,21 +386,26 @@ function GamePage() {
     }
   }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-validate via live transcript (debounced 150ms)
+  // Auto-validate via live transcript (debounced 150 ms)
+  const debouncedTranscript = useDebounce(speech.liveTranscript, 150)
+
   useEffect(() => {
-    if (phase !== 'recording' || !speech.liveTranscript || !phrase) return
+    if (phase !== 'recording' || !debouncedTranscript || !phrase) return
     if (autoStopRef.current) return
 
-    if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current)
-    liveDebounceRef.current = setTimeout(() => {
-      const spoken = expandCompounds(speech.liveTranscript).trim().split(/\s+/).map(normalizeWord).filter(Boolean)
-      const target = expandCompounds(phrase.text).trim().split(/\s+/).map(normalizeWord).filter(Boolean)
-      if (spoken.length < target.length) return
-      const { accuracy: acc } = computeAccuracy(speech.liveTranscript, phrase.text)
-      const autoStopThreshold = (ACCURACY_THRESHOLD[language ?? 'en'] ?? 0.72) * 0.9
-      if (acc >= autoStopThreshold) { autoStopRef.current = true; handleStopRef.current() }
-    }, 150)
-  }, [speech.liveTranscript, phase]) // eslint-disable-line react-hooks/exhaustive-deps
+    const spoken = expandCompounds(debouncedTranscript)
+      .trim()
+      .split(/\s+/)
+      .map(normalizeWord)
+      .filter(Boolean)
+
+    if (spoken.length < targetWords.length) return
+
+    const { accuracy: acc } = computeAccuracy(debouncedTranscript, phrase.text)
+    const autoStopThreshold = (ACCURACY_THRESHOLD[language ?? 'en'] ?? 0.72) * 0.9
+
+    if (acc >= autoStopThreshold) { autoStopRef.current = true; handleStopRef.current() }
+  }, [debouncedTranscript, phase, phrase, language, targetWords]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-retry mic errors only
   useEffect(() => {
@@ -340,14 +424,14 @@ function GamePage() {
   // Personal best tracking
   useEffect(() => {
     if (phase !== 'success' || !phrase || score === null) return
-    const pb  = getPersonalBest(phrase.id)
+    const pb    = getPersonalBest(phrase.id)
     const isNew = score > pb
     setIsNewRecord(isNew)
     if (isNew) savePersonalBest(phrase.id, score)
   }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleShare = useCallback(() => {
-    const text = `🎤 ${Math.round(accuracy * 100)}% de précision — ${score ?? 0} pts ! "${phrase?.text?.slice(0, 50)}" #Virelangues`
+    const text = `${Math.round(accuracy * 100)}% — ${score ?? 0} pts ! "${phrase?.text?.slice(0, 50)}" #Virelangues`
     if (typeof navigator.share === 'function') {
       navigator.share({ title: 'Virelangues', text, url: window.location.origin }).catch(() => {})
     } else {
@@ -355,7 +439,12 @@ function GamePage() {
     }
   }, [accuracy, score, phrase])
 
-  const themeHex = language ? LANG_THEME[language].hex : '#6366f1'
+  // Single LANG_THEME lookup — avoids two hash reads per render
+  const theme      = language ? LANG_THEME[language] : DEFAULT_THEME
+  const themeHex   = theme.hex
+  const langNative = theme.native
+  const diffLabel  = difficulty ? t(DIFF_KEYS[difficulty]) : ''
+
   const isPlaying = phase === 'recording' || phase === 'processing'
   const isSuccess = phase === 'success'
   const isFailed  = phase === 'failure' || phase === 'timeout'
@@ -385,10 +474,28 @@ function GamePage() {
     <div className="flex flex-col items-center gap-5 w-full slide-up">
       <Confetti active={isSuccess} primaryColor={themeHex} />
 
-      {practiceMode && (
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-             style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.25)' }}>
-          🎓 Mode entraînement — score non sauvegardé
+      {/* Context badge: language · difficulty */}
+      {language && difficulty && (
+        <div className="flex items-center gap-2 self-start">
+          <span
+            className="text-xs font-medium px-2.5 py-1 rounded-full"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.09)',
+              color: 'rgb(var(--p) / 0.8)',
+            }}
+          >
+            {langNative} · {diffLabel}
+          </span>
+          {practiceMode && (
+            <span
+              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)' }}
+            >
+              <GraduationCap size={12} />
+              {t('game.practice_hint')}
+            </span>
+          )}
         </div>
       )}
 
@@ -401,6 +508,7 @@ function GamePage() {
       >
         <PhraseCard
           text={phrase.text}
+          lang={language ?? 'en'}
           liveTranscript={speech.liveTranscript}
           wordScores={wordScores.length > 0 ? wordScores : undefined}
           isRecording={phase === 'recording'}
@@ -416,7 +524,6 @@ function GamePage() {
             sessionCount={sessionCount}
             sessionStreak={sessionStreak}
             isNewRecord={isNewRecord}
-            t={t}
           />
         )}
         {isFailed && (
@@ -431,15 +538,17 @@ function GamePage() {
             </p>
             {accuracy > 0 && phase === 'failure' && (
               <p className="text-slate-400 text-sm">
-                {Math.round(accuracy * 100)}% obtenu — {Math.round(threshold * 100)}% requis
+                {Math.round(accuracy * 100)}% {t('game.accuracy_short')}
+                {' '}{t('game.accuracy_required', { threshold: Math.round(threshold * 100) })}
               </p>
             )}
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Mic + practice toggle */}
       {!isSuccess && !isFailed && (phase === 'phrase_display' || isPlaying || speech.state === 'error') && (
-        <div className="mt-1 flex flex-col items-center gap-2">
+        <div className="mt-1 flex flex-col items-center gap-3">
           <MicButton
             state={speech.state}
             onStart={handleStart}
@@ -452,19 +561,29 @@ function GamePage() {
             disabled={phase === 'processing'}
             error={speech.error}
           />
+          {/* Practice toggle — inline transitions specified explicitly (transition-colors only covers class-based props) */}
           <button
             onClick={() => setPracticeMode(m => !m)}
-            className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-              practiceMode
-                ? 'text-amber-400 bg-amber-400/10 font-semibold'
-                : 'text-slate-600 hover:text-slate-400'
-            }`}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full cursor-pointer"
+            style={practiceMode ? {
+              background:  'rgba(251,191,36,0.1)',
+              color:       '#fbbf24',
+              border:      '1px solid rgba(251,191,36,0.2)',
+              fontWeight:  600,
+              transition:  'background 200ms ease, color 200ms ease, border-color 200ms ease',
+            } : {
+              color:       'rgb(100 116 139)',
+              border:      '1px solid transparent',
+              transition:  'background 200ms ease, color 200ms ease, border-color 200ms ease',
+            }}
           >
-            🎓 {practiceMode ? 'Entraînement ON' : 'Mode entraînement'}
+            <GraduationCap size={12} />
+            {practiceMode ? t('game.practice_active') : t('game.practice_mode')}
           </button>
         </div>
       )}
 
+      {/* Success actions */}
       {isSuccess && (
         <motion.div
           className="flex flex-col items-center gap-3 w-full max-w-xs"
@@ -486,7 +605,7 @@ function GamePage() {
               <input
                 type="text"
                 list="player-names"
-                placeholder="Ton prénom"
+                placeholder={t('game.player_placeholder')}
                 maxLength={30}
                 value={playerName}
                 disabled={submitScore.isPending}
@@ -518,46 +637,41 @@ function GamePage() {
               className="text-xs text-amber-400 text-center"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             >
-              ⚠ Score déjà enregistré pour cette phrase
+              {t('game.score_duplicate')}
             </motion.p>
           )}
 
           {!practiceMode && submitScore.isError && (
-            <p className="text-red-400 text-xs text-center">
-              Erreur lors de la sauvegarde — réessaie.
-            </p>
+            <p className="text-red-400 text-xs text-center">{t('game.save_error')}</p>
           )}
 
-          {(typeof navigator.share === 'function' || !!navigator.clipboard) && (
-            <motion.button
-              onClick={handleShare}
-              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white
-                         transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-            >
-              <Share2 size={13} />
-              Partager
-            </motion.button>
-          )}
+          {/* Share + difficulty upsell — data-driven from UPSELL_MAP */}
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            {(typeof navigator.share === 'function' || !!navigator.clipboard) && (
+              <motion.button
+                onClick={handleShare}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full hover:opacity-80"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#64748b', transition: 'opacity 150ms ease' }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+              >
+                <Share2 size={12} />
+                {t('game.share')}
+              </motion.button>
+            )}
 
-          {difficulty === 'easy' && sessionCount >= 2 && (
-            <motion.button
-              onClick={() => { useGameStore.setState({ difficulty: 'medium' }); handleNextPhrase() }}
-              className="text-xs text-slate-400 hover:text-white transition-colors underline underline-offset-2"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-            >
-              Essaie en Moyen ? 💪
-            </motion.button>
-          )}
-          {difficulty === 'medium' && sessionCount >= 2 && (
-            <motion.button
-              onClick={() => { useGameStore.setState({ difficulty: 'hard' }); handleNextPhrase() }}
-              className="text-xs text-slate-400 hover:text-white transition-colors underline underline-offset-2"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-            >
-              Prêt pour le Difficile ? 🔥
-            </motion.button>
-          )}
+            {UPSELL_MAP.filter(u => u.from === difficulty && sessionCount >= 2).map(u => (
+              <motion.button
+                key={u.to}
+                onClick={() => { useGameStore.setState({ difficulty: u.to }); handleNextPhrase() }}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full hover:opacity-80"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', transition: 'opacity 150ms ease' }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
+              >
+                <TrendingUp size={11} />
+                {t(u.key)}
+              </motion.button>
+            ))}
+          </div>
         </motion.div>
       )}
 

@@ -38,6 +38,8 @@ function HomePage() {
 
   const showLang = phase === 'language_select'
   const showDiff = phase === 'difficulty_select'
+  const stepNumber = showDiff ? 2 : 1
+  const stepLabel  = showDiff ? t('home.step_difficulty') : t('home.step_language')
 
   return (
     <div className="flex flex-col items-center gap-8 w-full slide-up">
@@ -51,12 +53,30 @@ function HomePage() {
         >
           <Mic size={36} strokeWidth={2} />
         </div>
-        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-gradient glow-text font-display">
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight glow-text font-display"
+            style={{ color: 'rgb(var(--p))' }}>
           {t('home.title')}
         </h1>
         <p className="text-slate-400 text-base md:text-lg max-w-sm mx-auto leading-relaxed">
           {t('home.subtitle')}
         </p>
+      </div>
+
+      {/* Step indicator */}
+      <div className="flex items-center gap-2">
+        <div
+          className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+          style={{ background: 'rgb(var(--p) / 0.1)', color: 'rgb(var(--p) / 0.7)', border: '1px solid rgb(var(--p) / 0.2)' }}
+        >
+          <span
+            className="inline-flex items-center justify-center w-4 h-4 rounded-full text-white text-[10px] font-black"
+            style={{ background: 'rgb(var(--p))' }}
+            aria-hidden
+          >
+            {stepNumber}
+          </span>
+          {stepLabel}
+        </div>
       </div>
 
       {/* Steps */}
@@ -70,13 +90,6 @@ function HomePage() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="flex items-center gap-3">
-              <span className="h-px flex-1 max-w-[4rem]" style={{ background: 'rgb(var(--p)/0.25)' }} />
-              <p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-400">
-                {t('home.choose_language')}
-              </p>
-              <span className="h-px flex-1 max-w-[4rem]" style={{ background: 'rgb(var(--p)/0.25)' }} />
-            </div>
             <LanguagePicker onSelect={handleLanguage} />
           </motion.div>
         )}
@@ -94,15 +107,8 @@ function HomePage() {
               onClick={() => useGameStore.setState({ phase: 'language_select' })}
               className="text-slate-500 hover:text-slate-300 text-xs flex items-center gap-1 transition-colors cursor-pointer"
             >
-              ← {t('home.choose_language')}
+              &larr; {t('home.choose_language')}
             </button>
-            <div className="flex items-center gap-3">
-              <span className="h-px flex-1 max-w-[4rem]" style={{ background: 'rgb(var(--p)/0.25)' }} />
-              <p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-400">
-                {t('difficulty.title')}
-              </p>
-              <span className="h-px flex-1 max-w-[4rem]" style={{ background: 'rgb(var(--p)/0.25)' }} />
-            </div>
             <DifficultyPicker onSelect={handleDifficulty} language={language} />
           </motion.div>
         )}
