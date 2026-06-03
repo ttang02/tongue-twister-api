@@ -7,6 +7,7 @@ import { LanguagePicker } from '@/components/LanguagePicker'
 import { DifficultyPicker } from '@/components/DifficultyPicker'
 import { useGameStore } from '@/store/gameStore'
 import { useCountUp } from '@/hooks/useCountUp'
+import { useShallow } from 'zustand/react/shallow'
 import type { Language, Difficulty } from '@/store/gameStore'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -16,7 +17,12 @@ export const Route = createFileRoute('/')({ component: HomePage })
 function HomePage() {
   const { t }    = useTranslation()
   const navigate = useNavigate()
-  const { phase, language, selectLanguage, selectDifficulty } = useGameStore()
+  const phase    = useGameStore((s) => s.phase)
+  const language = useGameStore((s) => s.language)
+  const { selectLanguage, selectDifficulty } = useGameStore(useShallow((s) => ({
+    selectLanguage:   s.selectLanguage,
+    selectDifficulty: s.selectDifficulty,
+  })))
 
   const { data: phraseCount } = useQuery({
     queryKey: ['phrase-count'],

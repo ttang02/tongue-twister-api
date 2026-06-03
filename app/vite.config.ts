@@ -16,6 +16,8 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom'],
           'motion':       ['motion/react'],
           'tanstack':     ['@tanstack/react-query', '@tanstack/react-router'],
+          'i18n':         ['react-i18next', 'i18next'],
+          'icons':        ['lucide-react'],
         },
       },
     },
@@ -35,7 +37,8 @@ export default defineConfig({
         display:          'standalone',
         orientation:      'portrait',
         icons: [
-          { src: '/logo.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: '/logo.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/logo.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
           { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
         ],
       },
@@ -44,7 +47,7 @@ export default defineConfig({
           {
             urlPattern: /^https?:\/\/.*\/phrases/,
             handler: 'NetworkFirst',
-            options: { cacheName: 'phrases-cache', expiration: { maxAgeSeconds: 3600 } },
+            options: { cacheName: 'phrases-cache', expiration: { maxAgeSeconds: 300 } },
           },
         ],
       },
