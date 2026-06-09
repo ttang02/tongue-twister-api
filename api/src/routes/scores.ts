@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia'
 import { eq, and, desc, sql } from 'drizzle-orm'
 import { db } from '../db/client'
 import { scores, phrases, playerStats } from '../db/schema'
+import { computeAccuracy } from '../lib/accuracy'
 
 const langEnum = t.Union([t.Literal('fr'), t.Literal('en'), t.Literal('ko'), t.Literal('vi')])
 const diffEnum = t.Union([t.Literal('easy'), t.Literal('medium'), t.Literal('hard')])
@@ -83,6 +84,13 @@ export const scoresRoute = new Elysia({ prefix: '/scores' })
 
     const sanitized = body.player_name.replace(/[<>&"]/g, '').slice(0, 30)
 
+    // Authoritative accuracy: if the client sends the transcript, recompute server-side
+    // so a forged `accuracy` value can't inflate the score. Fall back to the client value
+    // only when no transcript is provided (older clients).
+    const accuracy = body.transcript
+      ? computeAccuracy(body.transcript, phrase.text)
+      : body.accuracy
+
     // Deduplicate: same player + same phrase → return existing score
     const existing = await db
       .select({ id: scores.id, score: scores.score })
@@ -104,20 +112,20 @@ export const scoresRoute = new Elysia({ prefix: '/scores' })
     // Reject submissions below the accuracy threshold (same thresholds as client)
     const ACCURACY_THRESHOLD: Record<string, number> = { fr: 0.72, en: 0.75, ko: 0.68, vi: 0.65 }
     const threshold = ACCURACY_THRESHOLD[phrase.language] ?? 0.72
-    if (body.accuracy < threshold) return status(422, { error: 'Accuracy below threshold' })
+    if (accuracy < threshold) return status(422, { error: 'Accuracy below threshold' })
 
     // Recalculate score server-side to prevent cheating
     const DIFF_MULTIPLIER: Record<string, number> = { easy: 1.0, medium: 1.5, hard: 2.5 }
     const remaining_s = Math.max(0, phrase.timer_s - body.elapsed_ms / 1000)
     const multiplier  = DIFF_MULTIPLIER[phrase.difficulty] ?? 1.0
-    const serverScore = Math.round((Math.round(body.accuracy * 1000) + Math.floor(remaining_s) * 10) * multiplier)
+    const serverScore = Math.round((Math.round(accuracy * 1000) + Math.floor(remaining_s) * 10) * multiplier)
 
     // Insert individual score record
     const result = await db.insert(scores).values({
       phrase_id:   body.phrase_id,
       player_name: sanitized,
       elapsed_ms:  body.elapsed_ms,
-      accuracy:    body.accuracy,
+      accuracy,
       score:       serverScore,
     }).returning({ id: scores.id })
 
@@ -168,6 +176,7 @@ export const scoresRoute = new Elysia({ prefix: '/scores' })
       player_name: t.String({ minLength: 1, maxLength: 30 }),
       elapsed_ms:  t.Integer({ minimum: 0, maximum: 120_000 }),
       accuracy:    t.Number({ minimum: 0, maximum: 1 }),
+      transcript:  t.Optional(t.String({ maxLength: 500 })),
     }),
   })
 

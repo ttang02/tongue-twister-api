@@ -195,6 +195,7 @@ function GamePage() {
   const score         = useGameStore((s) => s.score)
   const wordScores    = useGameStore((s) => s.wordScores)
   const accuracy      = useGameStore((s) => s.accuracy)
+  const transcript    = useGameStore((s) => s.transcript)
   const playerName    = useGameStore((s) => s.playerName)
   const sessionScore  = useGameStore((s) => s.sessionScore)
   const sessionCount  = useGameStore((s) => s.sessionCount)
@@ -244,6 +245,7 @@ function GamePage() {
           player_name: name,
           elapsed_ms:  elapsedMsRef.current,
           accuracy,
+          transcript,   // server recomputes accuracy from this (anti-cheat)
         }),
       })
       if (!res.ok) throw new Error(`http_${res.status}`)
