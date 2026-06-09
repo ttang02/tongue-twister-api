@@ -296,6 +296,7 @@ function GamePage() {
   const apiErrorRef    = useRef(false)
   const handleStartRef = useRef<() => Promise<void>>(() => Promise.resolve())
   const handleStopRef  = useRef<() => Promise<void>>(() => Promise.resolve())
+  const primaryCtaRef  = useRef<HTMLButtonElement>(null)  // result-screen CTA (a11y focus target)
   const [shaking, setShaking]                 = useState(false)
   const [duplicateNotice, setDuplicateNotice] = useState(false)
   const [isNewRecord, setIsNewRecord]         = useState(false)
@@ -371,6 +372,15 @@ function GamePage() {
     setIsNewRecord(false)
     timer.reset(); speech.reset(); retry()
   }
+
+  // a11y: move focus to the result-screen primary action so keyboard / screen-reader
+  // users land on the next step instead of being stranded after a phase transition.
+  useEffect(() => {
+    if (phase === 'success' || phase === 'failure' || phase === 'timeout') {
+      const id = setTimeout(() => primaryCtaRef.current?.focus(), 300)
+      return () => clearTimeout(id)
+    }
+  }, [phase])
 
   // Shake on failure/timeout
   useEffect(() => {
@@ -594,6 +604,7 @@ function GamePage() {
           transition={{ delay: 0.25 }}
         >
           <button
+            ref={primaryCtaRef}
             onClick={handleNextPhrase}
             className="btn-primary w-full text-base flex items-center justify-center gap-2"
           >
@@ -683,7 +694,7 @@ function GamePage() {
           className="flex gap-3"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
         >
-          <button onClick={handleRetry} className="btn-primary px-7 min-h-[44px]">
+          <button ref={primaryCtaRef} onClick={handleRetry} className="btn-primary px-7 min-h-[44px]">
             {t('game.try_again')}
           </button>
           <button
