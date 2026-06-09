@@ -86,3 +86,4 @@ app/src/routeTree.gen.ts
 
 # macOS
 .DS_Store
+cloudflared.exe

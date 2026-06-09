@@ -40,7 +40,13 @@ const app = new Elysia({ adapter: node() })
 
   .onRequest(({ request, set }) => {
     if (request.method === 'POST') {
-      const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'unknown'
+      // Behind a Cloudflare tunnel the real client IP is in cf-connecting-ip;
+      // x-forwarded-for may be a list (take first) and is 127.0.0.1 via the local proxy.
+      const ip =
+        request.headers.get('cf-connecting-ip') ??
+        request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+        request.headers.get('x-real-ip') ??
+        'unknown'
       if (!checkRateLimit(ip, 30)) {
         set.status = 429
         return { error: 'Too many requests — réessaie dans une minute' }

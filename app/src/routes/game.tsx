@@ -22,7 +22,8 @@ import { useShallow } from 'zustand/react/shallow'
 export const Route = createFileRoute('/game')({ component: GamePage })
 
 const API_URL     = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
-const PERM_ERRORS = ['mic_denied', 'mic_not_supported', 'recorder_not_supported', 'speech_not_supported']
+// Errors that must NOT trigger silent auto-retry (would cause a visible loop on mobile)
+const PERM_ERRORS = ['mic_denied', 'mic_not_supported', 'recorder_not_supported', 'speech_not_supported', 'speech_network']
 
 // Hoisted spring configs — constant per star index, no allocation inside .map()
 const STAR_SPRINGS = [
