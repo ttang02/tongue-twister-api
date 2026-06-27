@@ -98,7 +98,7 @@ export function ScoreBoard({ language, difficulty }: Props) {
         return (
           <motion.div
             key={row.player_name}
-            className="relative flex items-center gap-3 px-4 py-3 hover:bg-white/4 transition-colors"
+            className="relative flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.05, duration: 0.3 }}
