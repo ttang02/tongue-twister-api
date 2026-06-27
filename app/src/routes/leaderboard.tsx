@@ -9,17 +9,20 @@ import type { Language, Difficulty } from '@/store/gameStore'
 
 export const Route = createFileRoute('/leaderboard')({ component: LeaderboardPage })
 
-const DIFFICULTIES: { value: Difficulty | undefined; label: string; dot?: string }[] = [
-  { value: undefined, label: 'Tous' },
-  { value: 'easy',   label: 'Facile',   dot: '#4ade80' },
-  { value: 'medium', label: 'Moyen',    dot: '#fbbf24' },
-  { value: 'hard',   label: 'Difficile', dot: '#f87171' },
+// i18n key per filter (undefined = all difficulties)
+const DIFFICULTIES: { value: Difficulty | undefined; key: string; dot?: string }[] = [
+  { value: undefined, key: 'difficulty.all' },
+  { value: 'easy',   key: 'difficulty.easy',   dot: '#4ade80' },
+  { value: 'medium', key: 'difficulty.medium', dot: '#fbbf24' },
+  { value: 'hard',   key: 'difficulty.hard',   dot: '#f87171' },
 ]
 
 function LeaderboardPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { language: storeLang, difficulty: storeDiff, reset } = useGameStore()
+  const storeLang = useGameStore((s) => s.language)
+  const storeDiff = useGameStore((s) => s.difficulty)
+  const reset     = useGameStore((s) => s.reset)
 
   const lang = storeLang ?? 'fr'
   const diff = storeDiff ?? undefined
@@ -92,7 +95,7 @@ function LeaderboardPage() {
                 style={{ backgroundColor: d.dot }}
               />
             )}
-            {d.label}
+            {t(d.key)}
           </motion.button>
         ))}
       </div>

@@ -47,14 +47,14 @@ function SkeletonRow() {
   )
 }
 
-function DiffCount({ count, diff }: { count: number; diff: 'easy' | 'medium' | 'hard' }) {
+function DiffCount({ count, diff, label }: { count: number; diff: 'easy' | 'medium' | 'hard'; label: string }) {
   if (count === 0) return null
   const b = DIFF_BADGE[diff]
   return (
     <span
       className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-bold tabular-nums"
       style={{ background: `${b.color}20`, color: b.color }}
-      title={`${diff}: ${count} phrase${count > 1 ? 's' : ''}`}
+      title={`${label}: ${count}`}
     >
       {b.label}{count}
     </span>
@@ -126,9 +126,9 @@ export function ScoreBoard({ language, difficulty }: Props) {
 
             {/* Difficulty counts */}
             <div className="relative hidden sm:flex items-center gap-1 shrink-0">
-              <DiffCount count={row.count_easy}   diff="easy"   />
-              <DiffCount count={row.count_medium} diff="medium" />
-              <DiffCount count={row.count_hard}   diff="hard"   />
+              <DiffCount count={row.count_easy}   diff="easy"   label={t('difficulty.easy')}   />
+              <DiffCount count={row.count_medium} diff="medium" label={t('difficulty.medium')} />
+              <DiffCount count={row.count_hard}   diff="hard"   label={t('difficulty.hard')}   />
             </div>
 
             {/* Total score */}

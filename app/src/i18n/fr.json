@@ -9,6 +9,7 @@
   },
   "difficulty": {
     "title": "Choisis la difficulté",
+    "all": "Tous",
     "easy": "Facile",
     "medium": "Moyen",
     "hard": "Difficile",

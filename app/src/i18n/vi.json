@@ -9,6 +9,7 @@
   },
   "difficulty": {
     "title": "Chọn độ khó",
+    "all": "Tất cả",
     "easy": "Dễ",
     "medium": "Trung bình",
     "hard": "Khó",
